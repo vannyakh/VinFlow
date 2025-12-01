@@ -22,7 +22,7 @@ from django.conf.urls.i18n import i18n_patterns
 from panel.views import set_language, user_login, register, user_logout
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path('django-admin/', admin.site.urls),  # Django admin at /django-admin/ to avoid conflict with custom admin
     path('i18n/', include('django.conf.urls.i18n')),  # Django's built-in i18n URLs
     path('set-language/', set_language, name='set_language'),  # Custom language switcher
 ]
