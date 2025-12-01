@@ -15,6 +15,8 @@ urlpatterns = [
     path('tickets/<int:ticket_id>/', views.ticket_detail, name='ticket_detail'),
     path('free-trial/', views.free_trial, name='free_trial'),
     path('profile/', views.profile, name='profile'),
+    path('add-funds/', views.add_funds, name='add_funds'),
+    path('transaction-logs/', views.transaction_logs, name='transaction_logs'),
     
     # Admin Routes
     path('admin/', views.admin_dashboard, name='admin_dashboard'),

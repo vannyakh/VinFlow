@@ -1,0 +1,157 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Transaction Logs" %} - VinFlow{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex items-center justify-between">
+        <h1 class="text-3xl font-bold">{% trans "Transaction Logs" %}</h1>
+        <a href="{% url 'add_funds' %}" class="btn-primary">
+            {% trans "Add Funds" %}
+        </a>
+    </div>
+    
+    <!-- Current Balance Card -->
+    <div class="card-glass rounded-xl p-6 gradient-purple">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-purple-100 text-sm mb-1">{% trans "Current Balance" %}</p>
+                <p class="text-3xl font-bold text-white">${{ user.profile.balance|floatformat:2 }}</p>
+            </div>
+            <div class="w-16 h-16 bg-white/20 rounded-lg flex items-center justify-center">
+                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Filters -->
+    <div class="card-glass rounded-xl p-4">
+        <div class="flex gap-2 flex-wrap">
+            <a href="{% url 'transaction_logs' %}" class="px-4 py-2 rounded-lg {% if not status_filter %}bg-purple-600{% else %}bg-slate-700 hover:bg-slate-600{% endif %} text-sm transition">
+                {% trans "All" %}
+            </a>
+            <a href="?status=completed" class="px-4 py-2 rounded-lg {% if status_filter == 'completed' %}bg-purple-600{% else %}bg-slate-700 hover:bg-slate-600{% endif %} text-sm transition">
+                {% trans "Completed" %}
+            </a>
+            <a href="?status=pending" class="px-4 py-2 rounded-lg {% if status_filter == 'pending' %}bg-purple-600{% else %}bg-slate-700 hover:bg-slate-600{% endif %} text-sm transition">
+                {% trans "Pending" %}
+            </a>
+            <a href="?status=failed" class="px-4 py-2 rounded-lg {% if status_filter == 'failed' %}bg-purple-600{% else %}bg-slate-700 hover:bg-slate-600{% endif %} text-sm transition">
+                {% trans "Failed" %}
+            </a>
+            <a href="?status=canceled" class="px-4 py-2 rounded-lg {% if status_filter == 'canceled' %}bg-purple-600{% else %}bg-slate-700 hover:bg-slate-600{% endif %} text-sm transition">
+                {% trans "Canceled" %}
+            </a>
+        </div>
+    </div>
+    
+    <!-- Transactions Table -->
+    <div class="card-glass rounded-xl p-6">
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="border-b border-slate-700">
+                        <th class="text-left py-3 px-4 text-gray-400">{% trans "Transaction ID" %}</th>
+                        <th class="text-left py-3 px-4 text-gray-400">{% trans "Amount" %}</th>
+                        <th class="text-left py-3 px-4 text-gray-400">{% trans "Method" %}</th>
+                        <th class="text-left py-3 px-4 text-gray-400">{% trans "Status" %}</th>
+                        <th class="text-left py-3 px-4 text-gray-400">{% trans "Date" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for transaction in transactions %}
+                    <tr class="border-b border-slate-800 hover:bg-slate-800/50 transition">
+                        <td class="py-3 px-4">
+                            <span class="font-mono text-sm">{{ transaction.transaction_id }}</span>
+                        </td>
+                        <td class="py-3 px-4">
+                            <span class="font-semibold text-cyan-400">${{ transaction.amount|floatformat:2 }}</span>
+                        </td>
+                        <td class="py-3 px-4">
+                            <span class="text-gray-300">{{ transaction.get_method_display }}</span>
+                        </td>
+                        <td class="py-3 px-4">
+                            <span class="px-2 py-1 rounded text-xs font-semibold
+                                {% if transaction.status == 'completed' %}bg-green-900/50 text-green-400
+                                {% elif transaction.status == 'pending' %}bg-yellow-900/50 text-yellow-400
+                                {% elif transaction.status == 'failed' %}bg-red-900/50 text-red-400
+                                {% else %}bg-gray-900/50 text-gray-400{% endif %}">
+                                {{ transaction.get_status_display }}
+                            </span>
+                        </td>
+                        <td class="py-3 px-4 text-sm text-gray-400">
+                            {{ transaction.created_at|date:"M d, Y H:i" }}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="py-12 text-center">
+                            <div class="flex flex-col items-center justify-center space-y-3">
+                                <svg class="w-16 h-16 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                </svg>
+                                <p class="text-gray-400 text-lg">{% trans "No transactions found" %}</p>
+                                <a href="{% url 'add_funds' %}" class="text-purple-400 hover:text-purple-300 text-sm">
+                                    {% trans "Add funds to get started" %}
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Summary Stats -->
+    {% if transactions %}
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="card-glass rounded-xl p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-400 text-sm">{% trans "Total Transactions" %}</p>
+                    <p class="text-2xl font-bold text-cyan-400">{{ transactions|length }}</p>
+                </div>
+                <div class="w-12 h-12 gradient-cyan rounded-lg flex items-center justify-center">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card-glass rounded-xl p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-400 text-sm">{% trans "Total Deposited" %}</p>
+                    <p class="text-2xl font-bold text-green-400">${{ total_deposited|floatformat:2 }}</p>
+                </div>
+                <div class="w-12 h-12 bg-green-600 rounded-lg flex items-center justify-center">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card-glass rounded-xl p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-400 text-sm">{% trans "Pending Payments" %}</p>
+                    <p class="text-2xl font-bold text-yellow-400">{{ pending_count }}</p>
+                </div>
+                <div class="w-12 h-12 bg-yellow-600 rounded-lg flex items-center justify-center">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

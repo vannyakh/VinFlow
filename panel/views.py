@@ -1381,3 +1381,90 @@ def admin_blog(request):
         'pending_tickets_count': Ticket.objects.filter(status__in=['open', 'in_progress']).count(),
     }
     return render(request, 'panel/admin/blog.html', context)
+
+# Add Funds
+@login_required
+def add_funds(request):
+    if request.method == 'POST':
+        amount = request.POST.get('amount', '').strip()
+        method = request.POST.get('method', '').strip()
+        
+        errors = []
+        
+        # Validate amount
+        try:
+            amount = float(amount)
+            if amount <= 0:
+                errors.append('Amount must be greater than 0')
+            elif amount < 1:
+                errors.append('Minimum amount is $1.00')
+            elif amount > 10000:
+                errors.append('Maximum amount is $10,000.00')
+        except (ValueError, TypeError):
+            errors.append('Invalid amount')
+        
+        # Validate payment method
+        valid_methods = [choice[0] for choice in Payment.PAYMENT_METHODS]
+        if method not in valid_methods:
+            errors.append('Invalid payment method')
+        
+        if not errors:
+            # Generate unique transaction ID
+            import uuid
+            transaction_id = f"TXN{uuid.uuid4().hex[:12].upper()}"
+            
+            # Create payment record
+            payment = Payment.objects.create(
+                transaction_id=transaction_id,
+                user=request.user,
+                amount=amount,
+                method=method,
+                status='pending',
+            )
+            
+            # TODO: Integrate with actual payment gateway
+            # For now, we'll simulate payment processing
+            # In production, this would redirect to payment gateway or process payment
+            
+            messages.success(request, f'Payment request created. Transaction ID: {transaction_id}. Please complete the payment.')
+            return redirect('transaction_logs')
+        
+        # Show errors
+        for error in errors:
+            messages.error(request, error)
+    
+    # GET request - show form
+    payment_methods = Payment.PAYMENT_METHODS
+    context = {
+        'payment_methods': payment_methods,
+    }
+    return render(request, 'panel/add_funds.html', context)
+
+# Transaction Logs (User's own transactions)
+@login_required
+def transaction_logs(request):
+    transactions = Payment.objects.filter(user=request.user).order_by('-created_at')
+    
+    # Filtering
+    status_filter = request.GET.get('status', '')
+    if status_filter:
+        transactions = transactions.filter(status=status_filter)
+    
+    # Calculate summary stats
+    total_deposited = Payment.objects.filter(
+        user=request.user, 
+        status='completed'
+    ).aggregate(Sum('amount'))['amount__sum'] or 0
+    
+    pending_count = Payment.objects.filter(
+        user=request.user,
+        status='pending'
+    ).count()
+    
+    context = {
+        'transactions': transactions,
+        'status_filter': status_filter,
+        'total_deposited': total_deposited,
+        'pending_count': pending_count,
+    }
+    return render(request, 'panel/transaction_logs.html', context)
