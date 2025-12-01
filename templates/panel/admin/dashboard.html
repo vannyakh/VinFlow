@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+
+{% block title %}Admin Dashboard - VinFlow{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <h1 class="text-3xl font-bold">{% if is_khmer %}ផ្ទាំងគ្រប់គ្រង Admin{% else %}Admin Dashboard{% endif %}</h1>
+    
+    <!-- Statistics Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="card-glass rounded-xl p-6">
+            <p class="text-gray-400 text-sm">{% if is_khmer %}អ្នកប្រើសរុប{% else %}Total Users{% endif %}</p>
+            <p class="text-3xl font-bold text-cyan-400">{{ total_users }}</p>
+        </div>
+        <div class="card-glass rounded-xl p-6">
+            <p class="text-gray-400 text-sm">{% if is_khmer %}ការកម្មង់សរុប{% else %}Total Orders{% endif %}</p>
+            <p class="text-3xl font-bold text-purple-400">{{ total_orders }}</p>
+        </div>
+        <div class="card-glass rounded-xl p-6">
+            <p class="text-gray-400 text-sm">{% if is_khmer %}ចំណូលសរុប{% else %}Total Revenue{% endif %}</p>
+            <p class="text-3xl font-bold text-green-400">${{ total_revenue|floatformat:2 }}</p>
+        </div>
+        <div class="card-glass rounded-xl p-6">
+            <p class="text-gray-400 text-sm">{% if is_khmer %}ការកម្មង់រង់ចាំ{% else %}Pending Orders{% endif %}</p>
+            <p class="text-3xl font-bold text-yellow-400">{{ pending_orders }}</p>
+        </div>
+    </div>
+    
+    <!-- Charts -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="card-glass rounded-xl p-6">
+            <h2 class="text-xl font-bold mb-4">{% if is_khmer %}ការកម្មង់ប្រចាំថ្ងៃ (30 ថ្ងៃចុងក្រោយ){% else %}Daily Orders (Last 30 Days){% endif %}</h2>
+            <canvas id="ordersChart"></canvas>
+        </div>
+        <div class="card-glass rounded-xl p-6">
+            <h2 class="text-xl font-bold mb-4">{% if is_khmer %}ចំណូលប្រចាំថ្ងៃ (30 ថ្ងៃចុងក្រោយ){% else %}Daily Revenue (Last 30 Days){% endif %}</h2>
+            <canvas id="revenueChart"></canvas>
+        </div>
+    </div>
+    
+    <!-- Top Services -->
+    <div class="card-glass rounded-xl p-6">
+        <h2 class="text-xl font-bold mb-4">{% if is_khmer %}សេវាកម្មដែលពេញនិយម{% else %}Top Services{% endif %}</h2>
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="border-b border-slate-700">
+                        <th class="text-left py-3 px-4">{% if is_khmer %}សេវាកម្ម{% else %}Service{% endif %}</th>
+                        <th class="text-left py-3 px-4">{% if is_khmer %}ចំនួនការកម្មង់{% else %}Orders{% endif %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for service in top_services %}
+                    <tr class="border-b border-slate-800">
+                        <td class="py-3 px-4">{{ service.name }}</td>
+                        <td class="py-3 px-4">{{ service.order_count }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Recent Orders -->
+    <div class="card-glass rounded-xl p-6">
+        <h2 class="text-xl font-bold mb-4">{% if is_khmer %}ការកម្មង់ថ្មីៗ{% else %}Recent Orders{% endif %}</h2>
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="border-b border-slate-700">
+                        <th class="text-left py-3 px-4">{% if is_khmer %}លេខកម្មង់{% else %}Order ID{% endif %}</th>
+                        <th class="text-left py-3 px-4">{% if is_khmer %}អ្នកប្រើ{% else %}User{% endif %}</th>
+                        <th class="text-left py-3 px-4">{% if is_khmer %}សេវាកម្ម{% else %}Service{% endif %}</th>
+                        <th class="text-left py-3 px-4">{% if is_khmer %}តម្លៃ{% else %}Charge{% endif %}</th>
+                        <th class="text-left py-3 px-4">{% if is_khmer %}ស្ថានភាព{% else %}Status{% endif %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in recent_orders %}
+                    <tr class="border-b border-slate-800">
+                        <td class="py-3 px-4">{{ order.order_id }}</td>
+                        <td class="py-3 px-4">{{ order.user.username }}</td>
+                        <td class="py-3 px-4">{{ order.service.name }}</td>
+                        <td class="py-3 px-4">${{ order.charge|floatformat:2 }}</td>
+                        <td class="py-3 px-4">
+                            <span class="px-2 py-1 rounded text-xs
+                                {% if order.status == 'Completed' %}bg-green-900/50 text-green-400
+                                {% elif order.status == 'Processing' %}bg-yellow-900/50 text-yellow-400
+                                {% else %}bg-blue-900/50 text-blue-400{% endif %}">
+                                {{ order.status }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+// Orders Chart
+const ordersCtx = document.getElementById('ordersChart').getContext('2d');
+new Chart(ordersCtx, {
+    type: 'line',
+    data: {
+        labels: [{% for stat in daily_stats %}'{{ stat.date|date:"M d" }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+        datasets: [{
+            label: '{% if is_khmer %}ការកម្មង់{% else %}Orders{% endif %}',
+            data: [{% for stat in daily_stats %}{{ stat.orders }}{% if not forloop.last %},{% endif %}{% endfor %}],
+            borderColor: 'rgb(124, 58, 237)',
+            backgroundColor: 'rgba(124, 58, 237, 0.1)',
+            tension: 0.4
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+            legend: { display: false }
+        }
+    }
+});
+
+// Revenue Chart
+const revenueCtx = document.getElementById('revenueChart').getContext('2d');
+new Chart(revenueCtx, {
+    type: 'bar',
+    data: {
+        labels: [{% for stat in daily_stats %}'{{ stat.date|date:"M d" }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+        datasets: [{
+            label: '{% if is_khmer %}ចំណូល{% else %}Revenue{% endif %}',
+            data: [{% for stat in daily_stats %}{{ stat.revenue }}{% if not forloop.last %},{% endif %}{% endfor %}],
+            backgroundColor: 'rgba(6, 182, 212, 0.5)',
+            borderColor: 'rgb(6, 182, 212)',
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+            legend: { display: false }
+        }
+    }
+});
+</script>
+{% endblock %}
+

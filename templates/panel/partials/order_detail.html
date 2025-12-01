@@ -1,0 +1,50 @@
+<div class="card-glass rounded-xl p-6">
+    <h2 class="text-2xl font-bold mb-4">{% if is_khmer %}ព័ត៌មានលម្អិតការកម្មង់{% else %}Order Details{% endif %}</h2>
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+            <p class="text-gray-400 text-sm">{% if is_khmer %}លេខកម្មង់{% else %}Order ID{% endif %}</p>
+            <p class="font-semibold">{{ order.order_id }}</p>
+        </div>
+        <div>
+            <p class="text-gray-400 text-sm">{% if is_khmer %}សេវាកម្ម{% else %}Service{% endif %}</p>
+            <p class="font-semibold">{{ order.service.name }}</p>
+        </div>
+        <div>
+            <p class="text-gray-400 text-sm">{% if is_khmer %}តំណភ្ជាប់{% else %}Link{% endif %}</p>
+            <a href="{{ order.link }}" target="_blank" class="text-cyan-400 hover:text-cyan-300 break-all">{{ order.link }}</a>
+        </div>
+        <div>
+            <p class="text-gray-400 text-sm">{% if is_khmer %}បរិមាណ{% else %}Quantity{% endif %}</p>
+            <p class="font-semibold">{{ order.quantity }}</p>
+        </div>
+        <div>
+            <p class="text-gray-400 text-sm">{% if is_khmer %}ស្ថានភាព{% else %}Status{% endif %}</p>
+            <span class="px-2 py-1 rounded text-xs
+                {% if order.status == 'Completed' %}bg-green-900/50 text-green-400
+                {% elif order.status == 'Processing' %}bg-yellow-900/50 text-yellow-400
+                {% else %}bg-blue-900/50 text-blue-400{% endif %}">
+                {{ order.status }}
+            </span>
+        </div>
+        <div>
+            <p class="text-gray-400 text-sm">{% if is_khmer %}តម្លៃ{% else %}Charge{% endif %}</p>
+            <p class="font-semibold text-cyan-400">${{ order.charge|floatformat:2 }}</p>
+        </div>
+        <div>
+            <p class="text-gray-400 text-sm">{% if is_khmer %}ចាប់ផ្តើម{% else %}Start Count{% endif %}</p>
+            <p class="font-semibold">{{ order.start_count }}</p>
+        </div>
+        <div>
+            <p class="text-gray-400 text-sm">{% if is_khmer %}នៅសល់{% else %}Remains{% endif %}</p>
+            <p class="font-semibold">{{ order.remains }}</p>
+        </div>
+        {% if order.drip_feed %}
+        <div>
+            <p class="text-gray-400 text-sm">{% if is_khmer %}Drip-Feed{% else %}Drip-Feed{% endif %}</p>
+            <p class="font-semibold">{{ order.drip_feed_quantity }}/{% if is_khmer %}ថ្ងៃ{% else %}day{% endif %} × {{ order.drip_feed_days }} {% if is_khmer %}ថ្ងៃ{% else %}days{% endif %}</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+

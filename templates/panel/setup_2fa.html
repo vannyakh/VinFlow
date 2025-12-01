@@ -1,0 +1,184 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% load static %}
+
+{% block title %}{% trans "Setup 2FA" %} - VinFlow{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+    <h1 class="text-3xl font-bold">{% trans "Setup Two-Factor Authentication" %}</h1>
+    
+    {% if enabled %}
+        <!-- Success: 2FA Enabled -->
+        <div class="card-glass rounded-xl p-6">
+            <div class="text-center space-y-4">
+                <div class="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center mx-auto">
+                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                </div>
+                <h2 class="text-2xl font-bold text-green-400">{% trans "2FA Successfully Enabled!" %}</h2>
+                <p class="text-gray-400">{% trans "Your account is now protected with two-factor authentication" %}</p>
+            </div>
+            
+            {% if backup_codes %}
+            <div class="mt-6 p-4 bg-yellow-900/20 border border-yellow-500/30 rounded-lg">
+                <h3 class="font-semibold text-yellow-400 mb-2">{% trans "Important: Save Your Backup Codes" %}</h3>
+                <p class="text-sm text-gray-400 mb-4">{% trans "These codes can be used to access your account if you lose your authenticator device. Store them in a safe place." %}</p>
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-2 mb-4">
+                    {% for code in backup_codes %}
+                        <div class="bg-slate-800 p-3 rounded font-mono text-center text-sm">{{ code }}</div>
+                    {% endfor %}
+                </div>
+                <button onclick="printBackupCodes()" class="btn-primary btn text-sm">
+                    {% trans "Print Backup Codes" %}
+                </button>
+            </div>
+            {% endif %}
+            
+            <div class="mt-6 text-center">
+                <a href="{% url 'profile' %}" class="btn-primary btn">
+                    {% trans "Back to Profile" %}
+                </a>
+            </div>
+        </div>
+    {% elif secret and qr_code %}
+        <!-- Step 2: Verify Code -->
+        <div class="card-glass rounded-xl p-6">
+            <h2 class="text-xl font-bold mb-4">{% trans "Step 2: Scan QR Code" %}</h2>
+            
+            <div class="space-y-6">
+                <div class="flex flex-col md:flex-row gap-6">
+                    <div class="flex-1">
+                        <p class="text-sm text-gray-400 mb-4">{% trans "Scan this QR code with your authenticator app (Google Authenticator, Authy, Microsoft Authenticator, etc.)" %}</p>
+                        <div class="bg-white p-4 rounded-lg inline-block">
+                            <img src="data:image/png;base64,{{ qr_code }}" alt="QR Code" class="w-64 h-64">
+                        </div>
+                    </div>
+                    
+                    <div class="flex-1 space-y-4">
+                        <div>
+                            <p class="text-sm font-medium mb-2">{% trans "Manual Entry Key" %}</p>
+                            <div class="flex items-center space-x-2">
+                                <code class="flex-1 bg-slate-800 p-3 rounded font-mono text-sm break-all">{{ secret }}</code>
+                                <button onclick="copyToClipboard('{{ secret }}')" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded text-sm transition">
+                                    {% trans "Copy" %}
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="p-4 bg-blue-900/20 border border-blue-500/30 rounded-lg">
+                            <p class="text-sm text-blue-400 font-medium mb-2">{% trans "Popular Authenticator Apps:" %}</p>
+                            <ul class="text-xs text-gray-400 space-y-1">
+                                <li>• Google Authenticator</li>
+                                <li>• Microsoft Authenticator</li>
+                                <li>• Authy</li>
+                                <li>• 1Password</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <form method="post" class="space-y-4 border-t border-slate-700 pt-6">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="verify">
+                    
+                    <div>
+                        <label class="block text-sm font-medium mb-2">{% trans "Enter Verification Code" %}</label>
+                        <input 
+                            type="text" 
+                            name="code" 
+                            required 
+                            maxlength="6" 
+                            pattern="[0-9]{6}" 
+                            placeholder="000000"
+                            autocomplete="one-time-code"
+                            inputmode="numeric"
+                            class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-center text-2xl tracking-widest focus:border-purple-500 focus:outline-none"
+                            autofocus
+                        >
+                        <p class="text-xs text-gray-400 mt-2">{% trans "Enter the 6-digit code from your authenticator app to verify and enable 2FA" %}</p>
+                    </div>
+                    
+                    <button type="submit" class="btn-primary btn w-full md:w-auto">
+                        {% trans "Verify & Enable 2FA" %}
+                    </button>
+                </form>
+            </div>
+        </div>
+    {% else %}
+        <!-- Step 1: Generate Secret -->
+        <div class="card-glass rounded-xl p-6">
+            <h2 class="text-xl font-bold mb-4">{% trans "Step 1: Generate Secret Key" %}</h2>
+            
+            <div class="space-y-4">
+                <div class="p-4 bg-blue-900/20 border border-blue-500/30 rounded-lg">
+                    <p class="text-sm text-blue-400 mb-2">{% trans "What is Two-Factor Authentication?" %}</p>
+                    <p class="text-xs text-gray-400">
+                        {% trans "2FA adds an extra layer of security to your account. After enabling, you'll need both your password and a code from your authenticator app to log in." %}
+                    </p>
+                </div>
+                
+                <form method="post" class="space-y-4">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="generate">
+                    
+                    <button type="submit" class="btn-primary btn w-full md:w-auto">
+                        {% trans "Generate QR Code" %}
+                    </button>
+                </form>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(function() {
+        const button = event.target;
+        const originalText = button.textContent;
+        button.textContent = '{% trans "Copied!" %}';
+        button.classList.add('bg-green-600');
+        setTimeout(function() {
+            button.textContent = originalText;
+            button.classList.remove('bg-green-600');
+        }, 2000);
+    }).catch(function(err) {
+        console.error('Failed to copy:', err);
+        alert('Failed to copy to clipboard');
+    });
+}
+
+function printBackupCodes() {
+    const codes = [{% for code in backup_codes %}'{{ code }}'{% if not forloop.last %},{% endif %}{% endfor %}];
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+        <html>
+            <head>
+                <title>{% trans "Backup Codes - VinFlow" %}</title>
+                <style>
+                    body { font-family: Arial, sans-serif; padding: 20px; }
+                    h1 { color: #8b5cf6; }
+                    .codes { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin: 20px 0; }
+                    .code { padding: 10px; border: 1px solid #ccc; text-align: center; font-family: monospace; }
+                    .warning { background: #fef3c7; padding: 15px; border-radius: 5px; margin: 20px 0; }
+                </style>
+            </head>
+            <body>
+                <h1>{% trans "VinFlow Backup Codes" %}</h1>
+                <p>{% trans "Store these codes in a safe place. Each code can only be used once." %}</p>
+                <div class="codes">
+                    ${codes.map(code => `<div class="code">${code}</div>`).join('')}
+                </div>
+                <div class="warning">
+                    <strong>{% trans "Important:" %}</strong> {% trans "If you lose access to your authenticator app, use these codes to access your account. Keep them secure!" %}
+                </div>
+            </body>
+        </html>
+    `);
+    printWindow.document.close();
+    printWindow.print();
+}
+</script>
+{% endblock %}
+

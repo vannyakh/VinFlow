@@ -1,0 +1,171 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Dashboard" %} - VinFlow{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Welcome Section -->
+    <div class="card-glass rounded-xl p-6 gradient-purple">
+        <h1 class="text-3xl font-bold mb-2">
+            {% blocktrans with username=user.username %}Welcome, {{ username }}!{% endblocktrans %}
+        </h1>
+        <p class="text-purple-100">
+            {% blocktrans with balance=user.profile.balance|floatformat:2 %}Your Balance: ${{ balance }}{% endblocktrans %}
+        </p>
+    </div>
+    
+    <!-- Statistics Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="card-glass rounded-xl p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-400 text-sm">{% trans "Total Orders" %}</p>
+                    <p class="text-2xl font-bold text-cyan-400">{{ total_orders }}</p>
+                </div>
+                <div class="w-12 h-12 gradient-cyan rounded-lg flex items-center justify-center">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                    </svg>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card-glass rounded-xl p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-400 text-sm">{% trans "Completed" %}</p>
+                    <p class="text-2xl font-bold text-green-400">{{ completed_orders }}</p>
+                </div>
+                <div class="w-12 h-12 bg-green-600 rounded-lg flex items-center justify-center">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card-glass rounded-xl p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-400 text-sm">{% trans "Pending" %}</p>
+                    <p class="text-2xl font-bold text-yellow-400">{{ pending_orders }}</p>
+                </div>
+                <div class="w-12 h-12 bg-yellow-600 rounded-lg flex items-center justify-center">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card-glass rounded-xl p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-400 text-sm">{% trans "Total Spent" %}</p>
+                    <p class="text-2xl font-bold text-purple-400">${{ total_spent|floatformat:2 }}</p>
+                </div>
+                <div class="w-12 h-12 gradient-purple rounded-lg flex items-center justify-center">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Actions -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <a href="{% url 'services' %}" class="card-glass rounded-xl p-6 hover:border-purple-500 transition border border-slate-700">
+            <div class="flex items-center space-x-4">
+                <div class="w-12 h-12 gradient-purple rounded-lg flex items-center justify-center">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="font-semibold text-lg">{% trans "Create Order" %}</h3>
+                    <p class="text-sm text-gray-400">{% trans "Order new services" %}</p>
+                </div>
+            </div>
+        </a>
+        
+        <a href="{% url 'free_trial' %}" class="card-glass rounded-xl p-6 hover:border-cyan-500 transition border border-slate-700">
+            <div class="flex items-center space-x-4">
+                <div class="w-12 h-12 gradient-cyan rounded-lg flex items-center justify-center">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 1013.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="font-semibold text-lg">{% trans "Free Trial" %}</h3>
+                    <p class="text-sm text-gray-400">{% trans "Get 100 free likes" %}</p>
+                </div>
+            </div>
+        </a>
+        
+        <a href="{% url 'tickets' %}" class="card-glass rounded-xl p-6 hover:border-gold-500 transition border border-slate-700">
+            <div class="flex items-center space-x-4">
+                <div class="w-12 h-12 gradient-gold rounded-lg flex items-center justify-center">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="font-semibold text-lg">{% trans "Support" %}</h3>
+                    <p class="text-sm text-gray-400">{% trans "Contact us" %}</p>
+                </div>
+            </div>
+        </a>
+    </div>
+    
+    <!-- Recent Orders -->
+    <div class="card-glass rounded-xl p-6">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-bold">{% trans "Recent Orders" %}</h2>
+            <a href="{% url 'orders' %}" class="text-purple-400 hover:text-purple-300 text-sm">{% trans "View All" %}</a>
+        </div>
+        
+        {% if recent_orders %}
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="border-b border-slate-700">
+                            <th class="text-left py-3 px-4 text-gray-400">{% trans "Order ID" %}</th>
+                            <th class="text-left py-3 px-4 text-gray-400">{% trans "Service" %}</th>
+                            <th class="text-left py-3 px-4 text-gray-400">{% trans "Quantity" %}</th>
+                            <th class="text-left py-3 px-4 text-gray-400">{% trans "Status" %}</th>
+                            <th class="text-left py-3 px-4 text-gray-400">{% trans "Date" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in recent_orders %}
+                        <tr class="border-b border-slate-800 hover:bg-slate-800/50">
+                            <td class="py-3 px-4">
+                                <a href="{% url 'order_detail' order.id %}" class="text-purple-400 hover:text-purple-300">
+                                    {{ order.order_id }}
+                                </a>
+                            </td>
+                            <td class="py-3 px-4">{{ order.service.name }}</td>
+                            <td class="py-3 px-4">{{ order.quantity }}</td>
+                            <td class="py-3 px-4">
+                                <span class="px-2 py-1 rounded text-xs
+                                    {% if order.status == 'Completed' %}bg-green-900/50 text-green-400
+                                    {% elif order.status == 'Processing' %}bg-yellow-900/50 text-yellow-400
+                                    {% elif order.status == 'Pending' %}bg-blue-900/50 text-blue-400
+                                    {% else %}bg-red-900/50 text-red-400{% endif %}">
+                                    {{ order.status }}
+                                </span>
+                            </td>
+                            <td class="py-3 px-4 text-sm text-gray-400">{{ order.created_at|date:"M d, Y" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="text-gray-400 text-center py-8">{% trans "No orders yet" %}</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

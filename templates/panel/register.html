@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Sign Up" %} - VinFlow{% endblock %}
+
+{% block content %}
+<div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full space-y-8">
+        <div class="text-center">
+            <div class="w-16 h-16 gradient-purple rounded-xl flex items-center justify-center mx-auto mb-4">
+                <span class="text-white font-bold text-2xl">V</span>
+            </div>
+            <h2 class="text-3xl font-bold">{% trans "Create Account" %}</h2>
+            <p class="text-gray-400 mt-2">{% trans "Join VinFlow and get 100 free likes!" %}</p>
+        </div>
+        
+        <div class="card-glass rounded-xl p-8">
+            <form method="post" class="space-y-6">
+                {% csrf_token %}
+                
+                <div>
+                    <label class="block text-sm font-medium mb-2">{% trans "Username" %} *</label>
+                    <input type="text" name="username" required minlength="3" class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 focus:border-purple-500 focus:outline-none" placeholder="{% trans 'Choose a username' %}">
+                    <p class="text-xs text-gray-400 mt-1">{% trans "At least 3 characters" %}</p>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium mb-2">{% trans "Email" %} *</label>
+                    <input type="email" name="email" required class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 focus:border-purple-500 focus:outline-none" placeholder="your@email.com">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium mb-2">{% trans "Password" %} *</label>
+                    <input type="password" name="password" required minlength="8" class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 focus:border-purple-500 focus:outline-none" placeholder="{% trans 'At least 8 characters' %}">
+                    <p class="text-xs text-gray-400 mt-1">{% trans "Minimum 8 characters" %}</p>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium mb-2">{% trans "Confirm Password" %} *</label>
+                    <input type="password" name="password_confirm" required minlength="8" class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 focus:border-purple-500 focus:outline-none" placeholder="{% trans 'Re-enter your password' %}">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium mb-2">{% trans "Referral Code" %} <span class="text-gray-400 text-xs">({% trans "Optional" %})</span></label>
+                    <input type="text" name="referral_code" class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 focus:border-purple-500 focus:outline-none" placeholder="{% trans 'Enter referral code if you have one' %}">
+                </div>
+                
+                <button type="submit" class="w-full btn-primary">
+                    {% trans "Create Account" %}
+                </button>
+            </form>
+            
+            <div class="mt-6 text-center">
+                <p class="text-sm text-gray-400">
+                    {% trans "Already have an account?" %}
+                    <a href="{% url 'login' %}" class="text-purple-400 hover:text-purple-300">{% trans "Login" %}</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
