@@ -1,17 +1,18 @@
 {% extends 'base.html' %}
+{% load i18n %}
 
-{% block title %}{% if is_khmer %}ការកម្មង់{% else %}Orders{% endif %} - VinFlow{% endblock %}
+{% block title %}{% trans "Orders" %} - VinFlow{% endblock %}
 
 {% block content %}
 <div class="space-y-6">
     <div class="flex justify-between items-center flex-wrap gap-4">
-        <h1 class="text-3xl font-bold">{% if is_khmer %}ការកម្មង់{% else %}Orders{% endif %}</h1>
+        <h1 class="text-3xl font-bold">{% trans "Orders" %}</h1>
         <div class="flex gap-2">
             <button onclick="document.getElementById('massUploadModal').classList.remove('hidden')" class="btn-primary text-sm">
-                {% if is_khmer %}កម្មង់ច្រើន (CSV){% else %}Mass Order (CSV){% endif %}
+                {% trans "Mass Order (CSV)" %}
             </button>
             <a href="{% url 'services' %}" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm">
-                {% if is_khmer %}កម្មង់ថ្មី{% else %}New Order{% endif %}
+                {% trans "New Order" %}
             </a>
         </div>
     </div>
@@ -20,16 +21,16 @@
     <div class="card-glass rounded-xl p-4">
         <div class="flex gap-2 flex-wrap">
             <a href="{% url 'orders' %}" class="px-4 py-2 rounded-lg {% if not status_filter %}bg-purple-600{% else %}bg-slate-700 hover:bg-slate-600{% endif %} text-sm">
-                {% if is_khmer %}ទាំងអស់{% else %}All{% endif %}
+                {% trans "All" %}
             </a>
             <a href="?status=Pending" class="px-4 py-2 rounded-lg {% if status_filter == 'Pending' %}bg-purple-600{% else %}bg-slate-700 hover:bg-slate-600{% endif %} text-sm">
-                {% if is_khmer %}រង់ចាំ{% else %}Pending{% endif %}
+                {% trans "Pending" %}
             </a>
             <a href="?status=Processing" class="px-4 py-2 rounded-lg {% if status_filter == 'Processing' %}bg-purple-600{% else %}bg-slate-700 hover:bg-slate-600{% endif %} text-sm">
-                {% if is_khmer %}កំពុងដំណើរការ{% else %}Processing{% endif %}
+                {% trans "Processing" %}
             </a>
             <a href="?status=Completed" class="px-4 py-2 rounded-lg {% if status_filter == 'Completed' %}bg-purple-600{% else %}bg-slate-700 hover:bg-slate-600{% endif %} text-sm">
-                {% if is_khmer %}បានបញ្ចប់{% else %}Completed{% endif %}
+                {% trans "Completed" %}
             </a>
         </div>
     </div>
@@ -41,15 +42,15 @@
                 <table class="w-full">
                     <thead>
                         <tr class="border-b border-slate-700">
-                            <th class="text-left py-3 px-4 text-gray-400">{% if is_khmer %}លេខកម្មង់{% else %}Order ID{% endif %}</th>
-                            <th class="text-left py-3 px-4 text-gray-400">{% if is_khmer %}សេវាកម្ម{% else %}Service{% endif %}</th>
-                            <th class="text-left py-3 px-4 text-gray-400">{% if is_khmer %}តំណភ្ជាប់{% else %}Link{% endif %}</th>
-                            <th class="text-left py-3 px-4 text-gray-400">{% if is_khmer %}បរិមាណ{% else %}Quantity{% endif %}</th>
-                            <th class="text-left py-3 px-4 text-gray-400">{% if is_khmer %}ស្ថានភាព{% else %}Status{% endif %}</th>
-                            <th class="text-left py-3 px-4 text-gray-400">{% if is_khmer %}ចាប់ផ្តើម{% else %}Start{% endif %}</th>
-                            <th class="text-left py-3 px-4 text-gray-400">{% if is_khmer %}នៅសល់{% else %}Remains{% endif %}</th>
-                            <th class="text-left py-3 px-4 text-gray-400">{% if is_khmer %}កាលបរិច្ឆេទ{% else %}Date{% endif %}</th>
-                            <th class="text-left py-3 px-4 text-gray-400">{% if is_khmer %}សកម្មភាព{% else %}Action{% endif %}</th>
+                            <th class="text-left py-3 px-4 text-gray-400">{% trans "Order ID" %}</th>
+                            <th class="text-left py-3 px-4 text-gray-400">{% trans "Service" %}</th>
+                            <th class="text-left py-3 px-4 text-gray-400">{% trans "Link" %}</th>
+                            <th class="text-left py-3 px-4 text-gray-400">{% trans "Quantity" %}</th>
+                            <th class="text-left py-3 px-4 text-gray-400">{% trans "Status" %}</th>
+                            <th class="text-left py-3 px-4 text-gray-400">{% trans "Start" %}</th>
+                            <th class="text-left py-3 px-4 text-gray-400">{% trans "Remains" %}</th>
+                            <th class="text-left py-3 px-4 text-gray-400">{% trans "Date" %}</th>
+                            <th class="text-left py-3 px-4 text-gray-400">{% trans "Action" %}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -97,7 +98,7 @@
                 </table>
             </div>
         {% else %}
-            <p class="text-gray-400 text-center py-8">{% if is_khmer %}មិនមានការកម្មង់{% else %}No orders found{% endif %}</p>
+            <p class="text-gray-400 text-center py-8">{% trans "No orders found" %}</p>
         {% endif %}
     </div>
 </div>
@@ -105,17 +106,17 @@
 <!-- Mass Upload Modal -->
 <div id="massUploadModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden items-center justify-center z-50" onclick="this.classList.add('hidden')">
     <div class="bg-slate-800 rounded-xl p-6 max-w-md w-full mx-4" onclick="event.stopPropagation()">
-        <h2 class="text-2xl font-bold mb-4">{% if is_khmer %}កម្មង់ច្រើន (CSV){% else %}Mass Order Upload{% endif %}</h2>
+        <h2 class="text-2xl font-bold mb-4">{% trans "Mass Order Upload" %}</h2>
         <p class="text-sm text-gray-400 mb-4">
-            {% if is_khmer %}ផ្ទុក CSV file ដែលមាន columns: service_id, link, quantity{% else %}Upload CSV file with columns: service_id, link, quantity{% endif %}
+            {% trans "Upload CSV file with columns: service_id, link, quantity" %}
         </p>
         <form method="post" action="{% url 'mass_order_upload' %}" enctype="multipart/form-data">
             {% csrf_token %}
             <input type="file" name="csv_file" accept=".csv" required class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 mb-4">
             <div class="flex gap-2">
-                <button type="submit" class="flex-1 btn-primary">{% if is_khmer %}ផ្ទុក{% else %}Upload{% endif %}</button>
+                <button type="submit" class="flex-1 btn-primary">{% trans "Upload" %}</button>
                 <button type="button" onclick="document.getElementById('massUploadModal').classList.add('hidden')" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg">
-                    {% if is_khmer %}បោះបង់{% else %}Cancel{% endif %}
+                    {% trans "Cancel" %}
                 </button>
             </div>
         </form>

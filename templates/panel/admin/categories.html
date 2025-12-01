@@ -1,0 +1,107 @@
+{% extends 'panel/admin/base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Categories Management" %} - VinFlow{% endblock %}
+
+{% block admin_content %}
+<div class="space-y-6">
+    <div class="flex justify-between items-center">
+        <h1 class="text-3xl font-bold">{% trans "Categories Management" %}</h1>
+        <button onclick="document.getElementById('addModal').classList.remove('hidden')" class="btn-primary">
+            {% trans "Add Category" %}
+        </button>
+    </div>
+    
+    <div class="card-glass rounded-xl p-6">
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="border-b border-slate-700">
+                        <th class="text-left py-3 px-4">{% trans "Name" %}</th>
+                        <th class="text-left py-3 px-4">{% trans "Name (Khmer)" %}</th>
+                        <th class="text-left py-3 px-4">{% trans "Order" %}</th>
+                        <th class="text-left py-3 px-4">{% trans "Status" %}</th>
+                        <th class="text-left py-3 px-4">{% trans "Actions" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for category in categories %}
+                    <tr class="border-b border-slate-800 hover:bg-slate-800/50">
+                        <td class="py-3 px-4">{{ category.name }}</td>
+                        <td class="py-3 px-4">{{ category.name_km|default:"-" }}</td>
+                        <td class="py-3 px-4">{{ category.order }}</td>
+                        <td class="py-3 px-4">
+                            <span class="px-2 py-1 rounded text-xs {% if category.is_active %}bg-green-900/50 text-green-400{% else %}bg-red-900/50 text-red-400{% endif %}">
+                                {% if category.is_active %}{% trans "Active" %}{% else %}{% trans "Inactive" %}{% endif %}
+                            </span>
+                        </td>
+                        <td class="py-3 px-4">
+                            <button onclick="editCategory({{ category.id }}, '{{ category.name }}', '{{ category.name_km }}', {{ category.order }}, {{ category.is_active|yesno:"true,false" }})" class="text-purple-400 hover:text-purple-300 text-sm mr-2">
+                                {% trans "Edit" %}
+                            </button>
+                            <form method="post" class="inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="category_id" value="{{ category.id }}">
+                                <button type="submit" name="action" value="delete" class="text-red-400 hover:text-red-300 text-sm" onclick="return confirm('{% trans 'Are you sure?' %}')">
+                                    {% trans "Delete" %}
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Modal -->
+<div id="addModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden items-center justify-center z-50" onclick="this.classList.add('hidden')">
+    <div class="bg-slate-800 rounded-xl p-6 max-w-md w-full mx-4" onclick="event.stopPropagation()">
+        <h2 class="text-2xl font-bold mb-4" id="modalTitle">{% trans "Add Category" %}</h2>
+        <form method="post" class="space-y-4">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="create" id="formAction">
+            <input type="hidden" name="category_id" id="categoryId">
+            <div>
+                <label class="block text-sm font-medium mb-2">{% trans "Name" %} *</label>
+                <input type="text" name="name" id="categoryName" required class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2">
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-2">{% trans "Name (Khmer)" %}</label>
+                <input type="text" name="name_km" id="categoryNameKm" class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2">
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-2">{% trans "Order" %}</label>
+                <input type="number" name="order" id="categoryOrder" value="0" class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2">
+            </div>
+            <div>
+                <label class="flex items-center space-x-2">
+                    <input type="checkbox" name="is_active" id="categoryActive" class="rounded">
+                    <span>{% trans "Active" %}</span>
+                </label>
+            </div>
+            <div class="flex gap-2">
+                <button type="submit" class="flex-1 btn-primary">{% trans "Save" %}</button>
+                <button type="button" onclick="document.getElementById('addModal').classList.add('hidden')" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg">
+                    {% trans "Cancel" %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function editCategory(id, name, nameKm, order, isActive) {
+    document.getElementById('modalTitle').textContent = '{% trans "Edit Category" %}';
+    document.getElementById('formAction').value = 'update';
+    document.getElementById('categoryId').value = id;
+    document.getElementById('categoryName').value = name;
+    document.getElementById('categoryNameKm').value = nameKm || '';
+    document.getElementById('categoryOrder').value = order;
+    document.getElementById('categoryActive').checked = isActive;
+    document.getElementById('addModal').classList.remove('hidden');
+}
+</script>
+{% endblock %}
+

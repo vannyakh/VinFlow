@@ -1,0 +1,89 @@
+{% extends 'panel/admin/base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Blacklist Link" %} - VinFlow{% endblock %}
+
+{% block admin_content %}
+<div class="space-y-6">
+    <div class="flex justify-between items-center">
+        <h1 class="text-3xl font-bold">{% trans "Blacklist Link" %}</h1>
+        <button onclick="document.getElementById('addModal').classList.remove('hidden')" class="btn-primary">
+            {% trans "Add Link" %}
+        </button>
+    </div>
+    
+    <div class="card-glass rounded-xl p-6">
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="border-b border-slate-700">
+                        <th class="text-left py-3 px-4">{% trans "Link" %}</th>
+                        <th class="text-left py-3 px-4">{% trans "Reason" %}</th>
+                        <th class="text-left py-3 px-4">{% trans "Status" %}</th>
+                        <th class="text-left py-3 px-4">{% trans "Created By" %}</th>
+                        <th class="text-left py-3 px-4">{% trans "Date" %}</th>
+                        <th class="text-left py-3 px-4">{% trans "Actions" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for link in blacklist_links %}
+                    <tr class="border-b border-slate-800 hover:bg-slate-800/50">
+                        <td class="py-3 px-4">{{ link.link|truncatechars:50 }}</td>
+                        <td class="py-3 px-4">{{ link.reason|truncatewords:10 }}</td>
+                        <td class="py-3 px-4">
+                            <span class="px-2 py-1 rounded text-xs {% if link.is_active %}bg-red-900/50 text-red-400{% else %}bg-gray-900/50 text-gray-400{% endif %}">
+                                {% if link.is_active %}{% trans "Active" %}{% else %}{% trans "Inactive" %}{% endif %}
+                            </span>
+                        </td>
+                        <td class="py-3 px-4">{{ link.created_by.username|default:"-" }}</td>
+                        <td class="py-3 px-4 text-sm text-gray-400">{{ link.created_at|date:"M d, Y" }}</td>
+                        <td class="py-3 px-4">
+                            <form method="post" class="inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="link_id" value="{{ link.id }}">
+                                <button type="submit" name="action" value="toggle" class="text-purple-400 hover:text-purple-300 text-sm mr-2">
+                                    {% if link.is_active %}{% trans "Deactivate" %}{% else %}{% trans "Activate" %}{% endif %}
+                                </button>
+                                <button type="submit" name="action" value="delete" class="text-red-400 hover:text-red-300 text-sm" onclick="return confirm('{% trans 'Are you sure?' %}')">
+                                    {% trans "Delete" %}
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="py-8 text-center text-gray-400">{% trans "No blacklisted links" %}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Add Modal -->
+<div id="addModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden items-center justify-center z-50" onclick="this.classList.add('hidden')">
+    <div class="bg-slate-800 rounded-xl p-6 max-w-md w-full mx-4" onclick="event.stopPropagation()">
+        <h2 class="text-2xl font-bold mb-4">{% trans "Add Link to Blacklist" %}</h2>
+        <form method="post" class="space-y-4">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="add">
+            <div>
+                <label class="block text-sm font-medium mb-2">{% trans "Link" %} *</label>
+                <input type="url" name="link" required class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2">
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-2">{% trans "Reason" %}</label>
+                <textarea name="reason" rows="3" class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2"></textarea>
+            </div>
+            <div class="flex gap-2">
+                <button type="submit" class="flex-1 btn-primary">{% trans "Add" %}</button>
+                <button type="button" onclick="document.getElementById('addModal').classList.add('hidden')" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg">
+                    {% trans "Cancel" %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+

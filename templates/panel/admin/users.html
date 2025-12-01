@@ -1,0 +1,66 @@
+{% extends 'panel/admin/base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Users Management" %} - VinFlow{% endblock %}
+
+{% block admin_content %}
+<div class="space-y-6">
+    <h1 class="text-3xl font-bold">{% trans "Users Management" %}</h1>
+    
+    <!-- Filters -->
+    <div class="card-glass rounded-xl p-4">
+        <form method="get" class="flex gap-4">
+            <input type="text" name="search" value="{{ search }}" placeholder="{% trans 'Search users...' %}" class="flex-1 bg-slate-700 border border-slate-600 rounded-lg px-4 py-2">
+            <select name="role" class="bg-slate-700 border border-slate-600 rounded-lg px-4 py-2">
+                <option value="">{% trans "All Roles" %}</option>
+                <option value="admin" {% if role_filter == 'admin' %}selected{% endif %}>{% trans "Admin" %}</option>
+                <option value="reseller" {% if role_filter == 'reseller' %}selected{% endif %}>{% trans "Reseller" %}</option>
+                <option value="user" {% if role_filter == 'user' %}selected{% endif %}>{% trans "User" %}</option>
+            </select>
+            <button type="submit" class="btn-primary">{% trans "Filter" %}</button>
+        </form>
+    </div>
+    
+    <!-- Users Table -->
+    <div class="card-glass rounded-xl p-6">
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="border-b border-slate-700">
+                        <th class="text-left py-3 px-4">{% trans "Username" %}</th>
+                        <th class="text-left py-3 px-4">{% trans "Email" %}</th>
+                        <th class="text-left py-3 px-4">{% trans "Role" %}</th>
+                        <th class="text-left py-3 px-4">{% trans "Balance" %}</th>
+                        <th class="text-left py-3 px-4">{% trans "Total Spent" %}</th>
+                        <th class="text-left py-3 px-4">{% trans "Joined" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr class="border-b border-slate-800 hover:bg-slate-800/50">
+                        <td class="py-3 px-4">{{ user.username }}</td>
+                        <td class="py-3 px-4">{{ user.email }}</td>
+                        <td class="py-3 px-4">
+                            <span class="px-2 py-1 rounded text-xs
+                                {% if user.profile.role == 'admin' %}bg-purple-900/50 text-purple-400
+                                {% elif user.profile.role == 'reseller' %}bg-cyan-900/50 text-cyan-400
+                                {% else %}bg-slate-700 text-gray-300{% endif %}">
+                                {{ user.profile.get_role_display }}
+                            </span>
+                        </td>
+                        <td class="py-3 px-4">${{ user.profile.balance|floatformat:2 }}</td>
+                        <td class="py-3 px-4">${{ user.profile.total_spent|floatformat:2 }}</td>
+                        <td class="py-3 px-4 text-sm text-gray-400">{{ user.date_joined|date:"M d, Y" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="py-8 text-center text-gray-400">{% trans "No users found" %}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

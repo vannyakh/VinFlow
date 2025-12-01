@@ -1,13 +1,14 @@
 {% extends 'base.html' %}
+{% load i18n %}
 
-{% block title %}{% if is_khmer %}សេវាកម្ម{% else %}Services{% endif %} - VinFlow{% endblock %}
+{% block title %}{% trans "Services" %} - VinFlow{% endblock %}
 
 {% block content %}
 <div class="space-y-6">
     <div class="flex justify-between items-center">
-        <h1 class="text-3xl font-bold">{% if is_khmer %}សេវាកម្ម{% else %}Services{% endif %}</h1>
+        <h1 class="text-3xl font-bold">{% trans "Services" %}</h1>
         <a href="{% url 'free_trial' %}" class="btn-primary">
-            {% if is_khmer %}100 Likes ឥតគិតថ្លៃ{% else %}Free 100 Likes{% endif %}
+            {% trans "Free 100 Likes" %}
         </a>
     </div>
     
@@ -34,7 +35,7 @@
                         
                         <button onclick="openOrderModal({{ service.id }}, '{{ service.name }}', {{ service.rate }}, {{ service.min_order }}, {{ service.max_order }}, {{ service.drip_feed_enabled|yesno:"true,false" }}, {{ service.refill_enabled|yesno:"true,false" }})" 
                                 class="w-full btn-primary text-sm">
-                            {% if is_khmer %}កម្មង់ឥឡូវ{% else %}Order Now{% endif %}
+                            {% trans "Order Now" %}
                         </button>
                     </div>
                 {% endfor %}
@@ -47,7 +48,7 @@
 <div id="orderModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden items-center justify-center z-50" onclick="closeOrderModal()">
     <div class="bg-slate-800 rounded-xl p-6 max-w-md w-full mx-4" onclick="event.stopPropagation()">
         <div class="flex justify-between items-center mb-4">
-            <h2 class="text-2xl font-bold">{% if is_khmer %}បង្កើតការកម្មង់{% else %}Create Order{% endif %}</h2>
+            <h2 class="text-2xl font-bold">{% trans "Create Order" %}</h2>
             <button onclick="closeOrderModal()" class="text-gray-400 hover:text-white">✕</button>
         </div>
         
@@ -56,44 +57,44 @@
             <input type="hidden" name="service_id" id="modal_service_id">
             
             <div>
-                <label class="block text-sm font-medium mb-2">{% if is_khmer %}សេវាកម្ម{% else %}Service{% endif %}</label>
+                <label class="block text-sm font-medium mb-2">{% trans "Service" %}</label>
                 <input type="text" id="modal_service_name" readonly class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2">
             </div>
             
             <div>
-                <label class="block text-sm font-medium mb-2">{% if is_khmer %}តំណភ្ជាប់{% else %}Link{% endif %} *</label>
+                <label class="block text-sm font-medium mb-2">{% trans "Link" %} *</label>
                 <input type="url" name="link" required class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 focus:border-purple-500 focus:outline-none">
             </div>
             
             <div>
-                <label class="block text-sm font-medium mb-2">{% if is_khmer %}បរិមាណ{% else %}Quantity{% endif %} *</label>
+                <label class="block text-sm font-medium mb-2">{% trans "Quantity" %} *</label>
                 <input type="number" name="quantity" id="modal_quantity" required min="1" class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 focus:border-purple-500 focus:outline-none">
-                <p class="text-xs text-gray-400 mt-1">{% if is_khmer %}ចន្លោះ:{% else %}Range:{% endif %} <span id="modal_range"></span></p>
+                <p class="text-xs text-gray-400 mt-1">{% trans "Range" %}: <span id="modal_range"></span></p>
             </div>
             
             <div id="dripFeedSection" class="hidden">
                 <div class="flex items-center space-x-2 mb-2">
                     <input type="checkbox" name="drip_feed" id="drip_feed" class="rounded">
-                    <label for="drip_feed" class="text-sm">{% if is_khmer %}Drip-Feed (បែងចែកតាមថ្ងៃ){% else %}Drip-Feed (Spread over days){% endif %}</label>
+                    <label for="drip_feed" class="text-sm">{% trans "Drip-Feed (Spread over days)" %}</label>
                 </div>
                 <div id="dripFeedOptions" class="hidden space-y-2">
-                    <input type="number" name="drip_feed_quantity" placeholder="{% if is_khmer %}បរិមាណក្នុងមួយថ្ងៃ{% else %}Quantity per day{% endif %}" class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2">
-                    <input type="number" name="drip_feed_days" placeholder="{% if is_khmer %}ចំនួនថ្ងៃ{% else %}Number of days{% endif %}" class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2">
+                    <input type="number" name="drip_feed_quantity" placeholder="{% trans 'Quantity per day' %}" class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2">
+                    <input type="number" name="drip_feed_days" placeholder="{% trans 'Number of days' %}" class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2">
                 </div>
             </div>
             
             <div>
-                <label class="block text-sm font-medium mb-2">{% if is_khmer %}លេខកូដបញ្ចុះតម្លៃ (ជម្រើស){% else %}Coupon Code (Optional){% endif %}</label>
+                <label class="block text-sm font-medium mb-2">{% trans "Coupon Code (Optional)" %}</label>
                 <input type="text" name="coupon_code" class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 focus:border-purple-500 focus:outline-none" placeholder="VINOPENING">
             </div>
             
             <div class="pt-4 border-t border-slate-700">
                 <div class="flex justify-between items-center mb-4">
-                    <span class="text-gray-400">{% if is_khmer %}តម្លៃសរុប{% else %}Total Charge{% endif %}:</span>
+                    <span class="text-gray-400">{% trans "Total Charge" %}:</span>
                     <span class="text-2xl font-bold text-cyan-400" id="total_charge">$0.00</span>
                 </div>
                 <button type="submit" class="w-full btn-primary">
-                    {% if is_khmer %}បង្កើតការកម្មង់{% else %}Create Order{% endif %}
+                    {% trans "Create Order" %}
                 </button>
             </div>
         </form>

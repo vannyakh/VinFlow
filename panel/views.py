@@ -23,7 +23,7 @@ import secrets
 from .models import (
     UserProfile, Service, ServiceCategory, Order, SubscriptionPackage,
     UserSubscription, Coupon, Payment, Ticket, TicketMessage,
-    AffiliateCommission, BlogPost
+    AffiliateCommission, BlogPost, BlacklistIP, BlacklistLink, BlacklistEmail
 )
 
 # Create UserProfile on user creation
@@ -892,6 +892,9 @@ def admin_dashboard(request):
     # Recent orders
     recent_orders = Order.objects.order_by('-created_at')[:10]
     
+    # Pending tickets count for sidebar
+    pending_tickets_count = Ticket.objects.filter(status__in=['open', 'in_progress']).count()
+    
     context = {
         'total_users': total_users,
         'total_orders': total_orders,
@@ -900,5 +903,481 @@ def admin_dashboard(request):
         'daily_stats': daily_stats,
         'top_services': top_services,
         'recent_orders': recent_orders,
+        'pending_tickets_count': pending_tickets_count,
     }
     return render(request, 'panel/admin/dashboard.html', context)
+
+# Admin decorator
+from functools import wraps
+
+def admin_required(view_func):
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_authenticated or request.user.profile.role != 'admin':
+            messages.error(request, 'Access denied')
+            return redirect('dashboard')
+        return view_func(request, *args, **kwargs)
+    return wrapper
+
+# Admin Statistics (same as dashboard)
+@login_required
+@admin_required
+def admin_statistics(request):
+    return admin_dashboard(request)
+
+# Admin Reports
+@login_required
+@admin_required
+def admin_reports(request):
+    # Generate various reports
+    today = timezone.now().date()
+    last_7_days = today - timedelta(days=7)
+    last_30_days = today - timedelta(days=30)
+    
+    # Revenue reports
+    revenue_7d = Order.objects.filter(created_at__date__gte=last_7_days).aggregate(Sum('charge'))['charge__sum'] or 0
+    revenue_30d = Order.objects.filter(created_at__date__gte=last_30_days).aggregate(Sum('charge'))['charge__sum'] or 0
+    
+    # Order reports
+    orders_7d = Order.objects.filter(created_at__date__gte=last_7_days).count()
+    orders_30d = Order.objects.filter(created_at__date__gte=last_30_days).count()
+    
+    # User reports
+    new_users_7d = User.objects.filter(date_joined__date__gte=last_7_days).count()
+    new_users_30d = User.objects.filter(date_joined__date__gte=last_30_days).count()
+    
+    # Service performance
+    service_performance = Service.objects.annotate(
+        total_orders=Count('order'),
+        total_revenue=Sum('order__charge')
+    ).order_by('-total_revenue')[:20]
+    
+    context = {
+        'revenue_7d': revenue_7d,
+        'revenue_30d': revenue_30d,
+        'orders_7d': orders_7d,
+        'orders_30d': orders_30d,
+        'new_users_7d': new_users_7d,
+        'new_users_30d': new_users_30d,
+        'service_performance': service_performance,
+        'pending_tickets_count': Ticket.objects.filter(status__in=['open', 'in_progress']).count(),
+    }
+    return render(request, 'panel/admin/reports.html', context)
+
+# Admin Orders Management
+@login_required
+@admin_required
+def admin_orders(request):
+    status_filter = request.GET.get('status', '')
+    search = request.GET.get('search', '')
+    
+    orders = Order.objects.all()
+    
+    if status_filter:
+        orders = orders.filter(status=status_filter)
+    
+    if search:
+        orders = orders.filter(
+            Q(order_id__icontains=search) |
+            Q(user__username__icontains=search) |
+            Q(service__name__icontains=search) |
+            Q(link__icontains=search)
+        )
+    
+    orders = orders.order_by('-created_at')[:100]
+    
+    context = {
+        'orders': orders,
+        'status_filter': status_filter,
+        'search': search,
+        'pending_tickets_count': Ticket.objects.filter(status__in=['open', 'in_progress']).count(),
+    }
+    return render(request, 'panel/admin/orders.html', context)
+
+# Admin Dripfeed Management
+@login_required
+@admin_required
+def admin_dripfeed(request):
+    dripfeed_orders = Order.objects.filter(drip_feed=True).order_by('-created_at')
+    
+    context = {
+        'dripfeed_orders': dripfeed_orders,
+        'pending_tickets_count': Ticket.objects.filter(status__in=['open', 'in_progress']).count(),
+    }
+    return render(request, 'panel/admin/dripfeed.html', context)
+
+# Admin Subscriptions Management
+@login_required
+@admin_required
+def admin_subscriptions(request):
+    subscriptions = UserSubscription.objects.all().order_by('-created_at')
+    active_count = subscriptions.filter(is_active=True).count()
+    
+    context = {
+        'subscriptions': subscriptions,
+        'active_count': active_count,
+        'pending_tickets_count': Ticket.objects.filter(status__in=['open', 'in_progress']).count(),
+    }
+    return render(request, 'panel/admin/subscriptions.html', context)
+
+# Admin Cancel Orders
+@login_required
+@admin_required
+def admin_cancel(request):
+    if request.method == 'POST':
+        order_id = request.POST.get('order_id')
+        reason = request.POST.get('reason', '')
+        
+        try:
+            order = Order.objects.get(id=order_id)
+            order.status = 'Canceled'
+            order.save()
+            messages.success(request, f'Order {order.order_id} has been canceled')
+        except Order.DoesNotExist:
+            messages.error(request, 'Order not found')
+    
+    canceled_orders = Order.objects.filter(status='Canceled').order_by('-updated_at')
+    
+    context = {
+        'canceled_orders': canceled_orders,
+        'pending_tickets_count': Ticket.objects.filter(status__in=['open', 'in_progress']).count(),
+    }
+    return render(request, 'panel/admin/cancel.html', context)
+
+# Admin Services Management
+@login_required
+@admin_required
+def admin_services(request):
+    services = Service.objects.all().order_by('category', 'name')
+    categories = ServiceCategory.objects.all().order_by('order')
+    
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        service_id = request.POST.get('service_id')
+        
+        try:
+            service = Service.objects.get(id=service_id)
+            if action == 'toggle_active':
+                service.is_active = not service.is_active
+                service.save()
+                messages.success(request, f'Service {service.name} status updated')
+            elif action == 'delete':
+                service.delete()
+                messages.success(request, f'Service {service.name} deleted')
+        except Service.DoesNotExist:
+            messages.error(request, 'Service not found')
+        return redirect('admin_services')
+    
+    context = {
+        'services': services,
+        'categories': categories,
+        'pending_tickets_count': Ticket.objects.filter(status__in=['open', 'in_progress']).count(),
+    }
+    return render(request, 'panel/admin/services.html', context)
+
+# Admin Transaction Logs
+@login_required
+@admin_required
+def admin_transactions(request):
+    transactions = Payment.objects.all().order_by('-created_at')[:200]
+    
+    status_filter = request.GET.get('status', '')
+    if status_filter:
+        transactions = transactions.filter(status=status_filter)
+    
+    context = {
+        'transactions': transactions,
+        'status_filter': status_filter,
+        'pending_tickets_count': Ticket.objects.filter(status__in=['open', 'in_progress']).count(),
+    }
+    return render(request, 'panel/admin/transactions.html', context)
+
+# Admin Categories Management
+@login_required
+@admin_required
+def admin_categories(request):
+    categories = ServiceCategory.objects.all().order_by('order')
+    
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        
+        if action == 'create':
+            name = request.POST.get('name')
+            name_km = request.POST.get('name_km', '')
+            order = int(request.POST.get('order', 0))
+            ServiceCategory.objects.create(name=name, name_km=name_km, order=order)
+            messages.success(request, 'Category created successfully')
+        elif action == 'update':
+            category_id = request.POST.get('category_id')
+            try:
+                category = ServiceCategory.objects.get(id=category_id)
+                category.name = request.POST.get('name')
+                category.name_km = request.POST.get('name_km', '')
+                category.order = int(request.POST.get('order', 0))
+                category.is_active = request.POST.get('is_active') == 'on'
+                category.save()
+                messages.success(request, 'Category updated successfully')
+            except ServiceCategory.DoesNotExist:
+                messages.error(request, 'Category not found')
+        elif action == 'delete':
+            category_id = request.POST.get('category_id')
+            try:
+                category = ServiceCategory.objects.get(id=category_id)
+                category.delete()
+                messages.success(request, 'Category deleted successfully')
+            except ServiceCategory.DoesNotExist:
+                messages.error(request, 'Category not found')
+        
+        return redirect('admin_categories')
+    
+    context = {
+        'categories': categories,
+        'pending_tickets_count': Ticket.objects.filter(status__in=['open', 'in_progress']).count(),
+    }
+    return render(request, 'panel/admin/categories.html', context)
+
+# Admin Tickets Management
+@login_required
+@admin_required
+def admin_tickets(request):
+    status_filter = request.GET.get('status', '')
+    tickets = Ticket.objects.all()
+    
+    if status_filter:
+        tickets = tickets.filter(status=status_filter)
+    
+    tickets = tickets.order_by('-created_at')
+    
+    context = {
+        'tickets': tickets,
+        'status_filter': status_filter,
+        'pending_tickets_count': Ticket.objects.filter(status__in=['open', 'in_progress']).count(),
+    }
+    return render(request, 'panel/admin/tickets.html', context)
+
+# Admin Users Management
+@login_required
+@admin_required
+def admin_users(request):
+    search = request.GET.get('search', '')
+    role_filter = request.GET.get('role', '')
+    
+    users = User.objects.all()
+    
+    if search:
+        users = users.filter(
+            Q(username__icontains=search) |
+            Q(email__icontains=search)
+        )
+    
+    if role_filter:
+        users = users.filter(profile__role=role_filter)
+    
+    users = users.order_by('-date_joined')[:100]
+    
+    context = {
+        'users': users,
+        'search': search,
+        'role_filter': role_filter,
+        'pending_tickets_count': Ticket.objects.filter(status__in=['open', 'in_progress']).count(),
+    }
+    return render(request, 'panel/admin/users.html', context)
+
+# Admin Subscribers Management
+@login_required
+@admin_required
+def admin_subscribers(request):
+    from django.db.models import Count
+    subscribers = User.objects.annotate(
+        subscription_count=Count('subscriptions'),
+        active_subscription_count=Count('subscriptions', filter=Q(subscriptions__is_active=True))
+    ).filter(subscription_count__gt=0)
+    
+    context = {
+        'subscribers': subscribers,
+        'pending_tickets_count': Ticket.objects.filter(status__in=['open', 'in_progress']).count(),
+    }
+    return render(request, 'panel/admin/subscribers.html', context)
+
+# Admin User Activity Log (placeholder - would need ActivityLog model)
+@login_required
+@admin_required
+def admin_user_activity(request):
+    # This would typically use an ActivityLog model
+    # For now, we'll show recent orders and tickets as activity
+    recent_orders = Order.objects.order_by('-created_at')[:50]
+    recent_tickets = Ticket.objects.order_by('-created_at')[:50]
+    
+    context = {
+        'recent_orders': recent_orders,
+        'recent_tickets': recent_tickets,
+        'pending_tickets_count': Ticket.objects.filter(status__in=['open', 'in_progress']).count(),
+    }
+    return render(request, 'panel/admin/user_activity.html', context)
+
+# Admin Blacklist IP
+@login_required
+@admin_required
+def admin_blacklist_ip(request):
+    blacklist_ips = BlacklistIP.objects.all().order_by('-created_at')
+    
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        
+        if action == 'add':
+            ip_address = request.POST.get('ip_address')
+            reason = request.POST.get('reason', '')
+            BlacklistIP.objects.create(
+                ip_address=ip_address,
+                reason=reason,
+                created_by=request.user
+            )
+            messages.success(request, f'IP {ip_address} added to blacklist')
+        elif action == 'delete':
+            ip_id = request.POST.get('ip_id')
+            try:
+                blacklist_ip = BlacklistIP.objects.get(id=ip_id)
+                blacklist_ip.delete()
+                messages.success(request, 'IP removed from blacklist')
+            except BlacklistIP.DoesNotExist:
+                messages.error(request, 'IP not found')
+        elif action == 'toggle':
+            ip_id = request.POST.get('ip_id')
+            try:
+                blacklist_ip = BlacklistIP.objects.get(id=ip_id)
+                blacklist_ip.is_active = not blacklist_ip.is_active
+                blacklist_ip.save()
+                messages.success(request, 'IP status updated')
+            except BlacklistIP.DoesNotExist:
+                messages.error(request, 'IP not found')
+        
+        return redirect('admin_blacklist_ip')
+    
+    context = {
+        'blacklist_ips': blacklist_ips,
+        'pending_tickets_count': Ticket.objects.filter(status__in=['open', 'in_progress']).count(),
+    }
+    return render(request, 'panel/admin/blacklist_ip.html', context)
+
+# Admin Blacklist Link
+@login_required
+@admin_required
+def admin_blacklist_link(request):
+    blacklist_links = BlacklistLink.objects.all().order_by('-created_at')
+    
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        
+        if action == 'add':
+            link = request.POST.get('link')
+            reason = request.POST.get('reason', '')
+            BlacklistLink.objects.create(
+                link=link,
+                reason=reason,
+                created_by=request.user
+            )
+            messages.success(request, 'Link added to blacklist')
+        elif action == 'delete':
+            link_id = request.POST.get('link_id')
+            try:
+                blacklist_link = BlacklistLink.objects.get(id=link_id)
+                blacklist_link.delete()
+                messages.success(request, 'Link removed from blacklist')
+            except BlacklistLink.DoesNotExist:
+                messages.error(request, 'Link not found')
+        elif action == 'toggle':
+            link_id = request.POST.get('link_id')
+            try:
+                blacklist_link = BlacklistLink.objects.get(id=link_id)
+                blacklist_link.is_active = not blacklist_link.is_active
+                blacklist_link.save()
+                messages.success(request, 'Link status updated')
+            except BlacklistLink.DoesNotExist:
+                messages.error(request, 'Link not found')
+        
+        return redirect('admin_blacklist_link')
+    
+    context = {
+        'blacklist_links': blacklist_links,
+        'pending_tickets_count': Ticket.objects.filter(status__in=['open', 'in_progress']).count(),
+    }
+    return render(request, 'panel/admin/blacklist_link.html', context)
+
+# Admin Blacklist Email
+@login_required
+@admin_required
+def admin_blacklist_email(request):
+    blacklist_emails = BlacklistEmail.objects.all().order_by('-created_at')
+    
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        
+        if action == 'add':
+            email = request.POST.get('email')
+            reason = request.POST.get('reason', '')
+            BlacklistEmail.objects.create(
+                email=email,
+                reason=reason,
+                created_by=request.user
+            )
+            messages.success(request, f'Email {email} added to blacklist')
+        elif action == 'delete':
+            email_id = request.POST.get('email_id')
+            try:
+                blacklist_email = BlacklistEmail.objects.get(id=email_id)
+                blacklist_email.delete()
+                messages.success(request, 'Email removed from blacklist')
+            except BlacklistEmail.DoesNotExist:
+                messages.error(request, 'Email not found')
+        elif action == 'toggle':
+            email_id = request.POST.get('email_id')
+            try:
+                blacklist_email = BlacklistEmail.objects.get(id=email_id)
+                blacklist_email.is_active = not blacklist_email.is_active
+                blacklist_email.save()
+                messages.success(request, 'Email status updated')
+            except BlacklistEmail.DoesNotExist:
+                messages.error(request, 'Email not found')
+        
+        return redirect('admin_blacklist_email')
+    
+    context = {
+        'blacklist_emails': blacklist_emails,
+        'pending_tickets_count': Ticket.objects.filter(status__in=['open', 'in_progress']).count(),
+    }
+    return render(request, 'panel/admin/blacklist_email.html', context)
+
+# Admin Blog Management
+@login_required
+@admin_required
+def admin_blog(request):
+    posts = BlogPost.objects.all().order_by('-created_at')
+    
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        
+        if action == 'toggle_publish':
+            post_id = request.POST.get('post_id')
+            try:
+                post = BlogPost.objects.get(id=post_id)
+                post.is_published = not post.is_published
+                post.save()
+                messages.success(request, 'Post status updated')
+            except BlogPost.DoesNotExist:
+                messages.error(request, 'Post not found')
+        elif action == 'delete':
+            post_id = request.POST.get('post_id')
+            try:
+                post = BlogPost.objects.get(id=post_id)
+                post.delete()
+                messages.success(request, 'Post deleted')
+            except BlogPost.DoesNotExist:
+                messages.error(request, 'Post not found')
+        
+        return redirect('admin_blog')
+    
+    context = {
+        'posts': posts,
+        'pending_tickets_count': Ticket.objects.filter(status__in=['open', 'in_progress']).count(),
+    }
+    return render(request, 'panel/admin/blog.html', context)

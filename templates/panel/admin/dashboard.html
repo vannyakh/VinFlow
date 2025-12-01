@@ -1,27 +1,28 @@
-{% extends 'base.html' %}
+{% extends 'panel/admin/base.html' %}
+{% load i18n %}
 
-{% block title %}Admin Dashboard - VinFlow{% endblock %}
+{% block title %}{% trans "Admin Dashboard" %} - VinFlow{% endblock %}
 
-{% block content %}
+{% block admin_content %}
 <div class="space-y-6">
-    <h1 class="text-3xl font-bold">{% if is_khmer %}ផ្ទាំងគ្រប់គ្រង Admin{% else %}Admin Dashboard{% endif %}</h1>
+    <h1 class="text-3xl font-bold">{% trans "Admin Dashboard" %}</h1>
     
     <!-- Statistics Cards -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div class="card-glass rounded-xl p-6">
-            <p class="text-gray-400 text-sm">{% if is_khmer %}អ្នកប្រើសរុប{% else %}Total Users{% endif %}</p>
+            <p class="text-gray-400 text-sm">{% trans "Total Users" %}</p>
             <p class="text-3xl font-bold text-cyan-400">{{ total_users }}</p>
         </div>
         <div class="card-glass rounded-xl p-6">
-            <p class="text-gray-400 text-sm">{% if is_khmer %}ការកម្មង់សរុប{% else %}Total Orders{% endif %}</p>
+            <p class="text-gray-400 text-sm">{% trans "Total Orders" %}</p>
             <p class="text-3xl font-bold text-purple-400">{{ total_orders }}</p>
         </div>
         <div class="card-glass rounded-xl p-6">
-            <p class="text-gray-400 text-sm">{% if is_khmer %}ចំណូលសរុប{% else %}Total Revenue{% endif %}</p>
+            <p class="text-gray-400 text-sm">{% trans "Total Revenue" %}</p>
             <p class="text-3xl font-bold text-green-400">${{ total_revenue|floatformat:2 }}</p>
         </div>
         <div class="card-glass rounded-xl p-6">
-            <p class="text-gray-400 text-sm">{% if is_khmer %}ការកម្មង់រង់ចាំ{% else %}Pending Orders{% endif %}</p>
+            <p class="text-gray-400 text-sm">{% trans "Pending Orders" %}</p>
             <p class="text-3xl font-bold text-yellow-400">{{ pending_orders }}</p>
         </div>
     </div>
@@ -29,24 +30,24 @@
     <!-- Charts -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div class="card-glass rounded-xl p-6">
-            <h2 class="text-xl font-bold mb-4">{% if is_khmer %}ការកម្មង់ប្រចាំថ្ងៃ (30 ថ្ងៃចុងក្រោយ){% else %}Daily Orders (Last 30 Days){% endif %}</h2>
+            <h2 class="text-xl font-bold mb-4">{% trans "Daily Orders (Last 30 Days)" %}</h2>
             <canvas id="ordersChart"></canvas>
         </div>
         <div class="card-glass rounded-xl p-6">
-            <h2 class="text-xl font-bold mb-4">{% if is_khmer %}ចំណូលប្រចាំថ្ងៃ (30 ថ្ងៃចុងក្រោយ){% else %}Daily Revenue (Last 30 Days){% endif %}</h2>
+            <h2 class="text-xl font-bold mb-4">{% trans "Daily Revenue (Last 30 Days)" %}</h2>
             <canvas id="revenueChart"></canvas>
         </div>
     </div>
     
     <!-- Top Services -->
     <div class="card-glass rounded-xl p-6">
-        <h2 class="text-xl font-bold mb-4">{% if is_khmer %}សេវាកម្មដែលពេញនិយម{% else %}Top Services{% endif %}</h2>
+        <h2 class="text-xl font-bold mb-4">{% trans "Top Services" %}</h2>
         <div class="overflow-x-auto">
             <table class="w-full">
                 <thead>
                     <tr class="border-b border-slate-700">
-                        <th class="text-left py-3 px-4">{% if is_khmer %}សេវាកម្ម{% else %}Service{% endif %}</th>
-                        <th class="text-left py-3 px-4">{% if is_khmer %}ចំនួនការកម្មង់{% else %}Orders{% endif %}</th>
+                        <th class="text-left py-3 px-4">{% trans "Service" %}</th>
+                        <th class="text-left py-3 px-4">{% trans "Orders" %}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -63,16 +64,16 @@
     
     <!-- Recent Orders -->
     <div class="card-glass rounded-xl p-6">
-        <h2 class="text-xl font-bold mb-4">{% if is_khmer %}ការកម្មង់ថ្មីៗ{% else %}Recent Orders{% endif %}</h2>
+        <h2 class="text-xl font-bold mb-4">{% trans "Recent Orders" %}</h2>
         <div class="overflow-x-auto">
             <table class="w-full">
                 <thead>
                     <tr class="border-b border-slate-700">
-                        <th class="text-left py-3 px-4">{% if is_khmer %}លេខកម្មង់{% else %}Order ID{% endif %}</th>
-                        <th class="text-left py-3 px-4">{% if is_khmer %}អ្នកប្រើ{% else %}User{% endif %}</th>
-                        <th class="text-left py-3 px-4">{% if is_khmer %}សេវាកម្ម{% else %}Service{% endif %}</th>
-                        <th class="text-left py-3 px-4">{% if is_khmer %}តម្លៃ{% else %}Charge{% endif %}</th>
-                        <th class="text-left py-3 px-4">{% if is_khmer %}ស្ថានភាព{% else %}Status{% endif %}</th>
+                        <th class="text-left py-3 px-4">{% trans "Order ID" %}</th>
+                        <th class="text-left py-3 px-4">{% trans "User" %}</th>
+                        <th class="text-left py-3 px-4">{% trans "Service" %}</th>
+                        <th class="text-left py-3 px-4">{% trans "Charge" %}</th>
+                        <th class="text-left py-3 px-4">{% trans "Status" %}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -106,7 +107,7 @@ new Chart(ordersCtx, {
     data: {
         labels: [{% for stat in daily_stats %}'{{ stat.date|date:"M d" }}'{% if not forloop.last %},{% endif %}{% endfor %}],
         datasets: [{
-            label: '{% if is_khmer %}ការកម្មង់{% else %}Orders{% endif %}',
+            label: '{% trans "Orders" %}',
             data: [{% for stat in daily_stats %}{{ stat.orders }}{% if not forloop.last %},{% endif %}{% endfor %}],
             borderColor: 'rgb(124, 58, 237)',
             backgroundColor: 'rgba(124, 58, 237, 0.1)',
@@ -129,7 +130,7 @@ new Chart(revenueCtx, {
     data: {
         labels: [{% for stat in daily_stats %}'{{ stat.date|date:"M d" }}'{% if not forloop.last %},{% endif %}{% endfor %}],
         datasets: [{
-            label: '{% if is_khmer %}ចំណូល{% else %}Revenue{% endif %}',
+            label: '{% trans "Revenue" %}',
             data: [{% for stat in daily_stats %}{{ stat.revenue }}{% if not forloop.last %},{% endif %}{% endfor %}],
             backgroundColor: 'rgba(6, 182, 212, 0.5)',
             borderColor: 'rgb(6, 182, 212)',

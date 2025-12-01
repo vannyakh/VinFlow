@@ -1,13 +1,14 @@
 {% extends 'base.html' %}
+{% load i18n %}
 
-{% block title %}Ticket {{ ticket.ticket_id }} - VinFlow{% endblock %}
+{% block title %}{% blocktrans with ticket_id=ticket.ticket_id %}Ticket {{ ticket_id }}{% endblocktrans %} - VinFlow{% endblock %}
 
 {% block content %}
 <div class="max-w-4xl mx-auto space-y-6">
     <div class="flex justify-between items-center">
         <div>
             <h1 class="text-3xl font-bold">{{ ticket.subject }}</h1>
-            <p class="text-gray-400 mt-1">{% if is_khmer %}Ticket ID:{% else %}Ticket ID:{% endif %} {{ ticket.ticket_id }}</p>
+            <p class="text-gray-400 mt-1">{% trans "Ticket ID" %}: {{ ticket.ticket_id }}</p>
         </div>
         <div class="flex gap-2">
             <span class="px-3 py-1 rounded text-sm
@@ -27,7 +28,7 @@
                     <div>
                         <span class="font-semibold">{{ message.user.username }}</span>
                         {% if message.is_admin %}
-                            <span class="ml-2 px-2 py-0.5 bg-purple-600 rounded text-xs">Admin</span>
+                            <span class="ml-2 px-2 py-0.5 bg-purple-600 rounded text-xs">{% trans "Admin" %}</span>
                         {% endif %}
                     </div>
                     <span class="text-sm text-gray-400">{{ message.created_at|date:"M d, Y H:i" }}</span>
@@ -39,11 +40,11 @@
     
     <!-- Reply Form -->
     <div class="card-glass rounded-xl p-6">
-        <h2 class="text-xl font-bold mb-4">{% if is_khmer %}ឆ្លើយតប{% else %}Reply{% endif %}</h2>
+        <h2 class="text-xl font-bold mb-4">{% trans "Reply" %}</h2>
         <form method="post" class="space-y-4">
             {% csrf_token %}
-            <textarea name="message" rows="4" required class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 focus:border-purple-500 focus:outline-none" placeholder="{% if is_khmer %}វាយបញ្ចូលសាររបស់អ្នក...{% else %}Type your message...{% endif %}"></textarea>
-            <button type="submit" class="btn-primary">{% if is_khmer %}ផ្ញើ{% else %}Send{% endif %}</button>
+            <textarea name="message" rows="4" required class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 focus:border-purple-500 focus:outline-none" placeholder="{% trans 'Type your message...' %}"></textarea>
+            <button type="submit" class="btn-primary">{% trans "Send" %}</button>
         </form>
     </div>
 </div>

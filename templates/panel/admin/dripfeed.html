@@ -1,0 +1,53 @@
+{% extends 'panel/admin/base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Dripfeed Orders" %} - VinFlow{% endblock %}
+
+{% block admin_content %}
+<div class="space-y-6">
+    <h1 class="text-3xl font-bold">{% trans "Dripfeed Orders" %}</h1>
+    
+    <div class="card-glass rounded-xl p-6">
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="border-b border-slate-700">
+                        <th class="text-left py-3 px-4">{% trans "Order ID" %}</th>
+                        <th class="text-left py-3 px-4">{% trans "User" %}</th>
+                        <th class="text-left py-3 px-4">{% trans "Service" %}</th>
+                        <th class="text-left py-3 px-4">{% trans "Quantity/Day" %}</th>
+                        <th class="text-left py-3 px-4">{% trans "Days" %}</th>
+                        <th class="text-left py-3 px-4">{% trans "Status" %}</th>
+                        <th class="text-left py-3 px-4">{% trans "Created" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in dripfeed_orders %}
+                    <tr class="border-b border-slate-800 hover:bg-slate-800/50">
+                        <td class="py-3 px-4">{{ order.order_id }}</td>
+                        <td class="py-3 px-4">{{ order.user.username }}</td>
+                        <td class="py-3 px-4">{{ order.service.name }}</td>
+                        <td class="py-3 px-4">{{ order.drip_feed_quantity }}</td>
+                        <td class="py-3 px-4">{{ order.drip_feed_days }}</td>
+                        <td class="py-3 px-4">
+                            <span class="px-2 py-1 rounded text-xs
+                                {% if order.status == 'Completed' %}bg-green-900/50 text-green-400
+                                {% elif order.status == 'Processing' %}bg-yellow-900/50 text-yellow-400
+                                {% else %}bg-blue-900/50 text-blue-400{% endif %}">
+                                {{ order.status }}
+                            </span>
+                        </td>
+                        <td class="py-3 px-4 text-sm text-gray-400">{{ order.created_at|date:"M d, Y" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="py-8 text-center text-gray-400">{% trans "No dripfeed orders" %}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

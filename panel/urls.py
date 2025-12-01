@@ -15,7 +15,26 @@ urlpatterns = [
     path('tickets/<int:ticket_id>/', views.ticket_detail, name='ticket_detail'),
     path('free-trial/', views.free_trial, name='free_trial'),
     path('profile/', views.profile, name='profile'),
+    
+    # Admin Routes
     path('admin/', views.admin_dashboard, name='admin_dashboard'),
+    path('admin/statistics/', views.admin_statistics, name='admin_statistics'),
+    path('admin/reports/', views.admin_reports, name='admin_reports'),
+    path('admin/orders/', views.admin_orders, name='admin_orders'),
+    path('admin/dripfeed/', views.admin_dripfeed, name='admin_dripfeed'),
+    path('admin/subscriptions/', views.admin_subscriptions, name='admin_subscriptions'),
+    path('admin/cancel/', views.admin_cancel, name='admin_cancel'),
+    path('admin/services/', views.admin_services, name='admin_services'),
+    path('admin/transactions/', views.admin_transactions, name='admin_transactions'),
+    path('admin/categories/', views.admin_categories, name='admin_categories'),
+    path('admin/tickets/', views.admin_tickets, name='admin_tickets'),
+    path('admin/users/', views.admin_users, name='admin_users'),
+    path('admin/subscribers/', views.admin_subscribers, name='admin_subscribers'),
+    path('admin/user-activity/', views.admin_user_activity, name='admin_user_activity'),
+    path('admin/blacklist/ip/', views.admin_blacklist_ip, name='admin_blacklist_ip'),
+    path('admin/blacklist/link/', views.admin_blacklist_link, name='admin_blacklist_link'),
+    path('admin/blacklist/email/', views.admin_blacklist_email, name='admin_blacklist_email'),
+    path('admin/blog/', views.admin_blog, name='admin_blog'),
     
     # 2FA Routes
     path('verify-2fa/', views.verify_2fa, name='verify_2fa'),

@@ -1,13 +1,14 @@
 {% extends 'base.html' %}
+{% load i18n %}
 
-{% block title %}{% if is_khmer %}គាំទ្រ{% else %}Support{% endif %} - VinFlow{% endblock %}
+{% block title %}{% trans "Support" %} - VinFlow{% endblock %}
 
 {% block content %}
 <div class="space-y-6">
     <div class="flex justify-between items-center">
-        <h1 class="text-3xl font-bold">{% if is_khmer %}ប្រព័ន្ធគាំទ្រ{% else %}Support Tickets{% endif %}</h1>
+        <h1 class="text-3xl font-bold">{% trans "Support Tickets" %}</h1>
         <a href="{% url 'create_ticket' %}" class="btn-primary">
-            {% if is_khmer %}បង្កើត Ticket ថ្មី{% else %}Create New Ticket{% endif %}
+            {% trans "Create New Ticket" %}
         </a>
     </div>
     
@@ -40,7 +41,7 @@
                 {% endfor %}
             </div>
         {% else %}
-            <p class="text-gray-400 text-center py-8">{% if is_khmer %}មិនមាន Tickets{% else %}No tickets yet{% endif %}</p>
+            <p class="text-gray-400 text-center py-8">{% trans "No tickets yet" %}</p>
         {% endif %}
     </div>
 </div>

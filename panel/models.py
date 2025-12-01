@@ -259,3 +259,40 @@ class BlogPost(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+
+# Blacklist Models
+class BlacklistIP(models.Model):
+    ip_address = models.GenericIPAddressField(unique=True)
+    reason = models.TextField(blank=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='blacklisted_ips')
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_active = models.BooleanField(default=True)
+    
+    class Meta:
+        verbose_name = "Blacklist IP Address"
+        verbose_name_plural = "Blacklist IP Addresses"
+        ordering = ['-created_at']
+
+class BlacklistLink(models.Model):
+    link = models.URLField(unique=True)
+    reason = models.TextField(blank=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='blacklisted_links')
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_active = models.BooleanField(default=True)
+    
+    class Meta:
+        verbose_name = "Blacklist Link"
+        verbose_name_plural = "Blacklist Links"
+        ordering = ['-created_at']
+
+class BlacklistEmail(models.Model):
+    email = models.EmailField(unique=True)
+    reason = models.TextField(blank=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='blacklisted_emails')
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_active = models.BooleanField(default=True)
+    
+    class Meta:
+        verbose_name = "Blacklist Email"
+        verbose_name_plural = "Blacklist Emails"
+        ordering = ['-created_at']
