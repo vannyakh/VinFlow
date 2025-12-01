@@ -18,6 +18,13 @@ urlpatterns = [
     path('add-funds/', views.add_funds, name='add_funds'),
     path('transaction-logs/', views.transaction_logs, name='transaction_logs'),
     
+    # Payment Gateway Routes
+    path('payment/paypal/return/', views.paypal_return, name='paypal_return'),
+    path('payment/paypal/cancel/', views.paypal_cancel, name='paypal_cancel'),
+    path('payment/stripe/success/', views.stripe_success, name='stripe_success'),
+    path('payment/stripe/cancel/', views.stripe_cancel, name='stripe_cancel'),
+    path('payment/stripe/webhook/', views.stripe_webhook, name='stripe_webhook'),
+    
     # Admin Routes
     path('admin/', views.admin_dashboard, name='admin_dashboard'),
     path('admin/statistics/', views.admin_statistics, name='admin_statistics'),

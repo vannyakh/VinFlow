@@ -180,3 +180,17 @@ CORS_ALLOW_CREDENTIALS = True
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
+
+# Payment Gateway Settings
+# PayPal Settings
+PAYPAL_CLIENT_ID = 'YOUR_PAYPAL_CLIENT_ID'
+PAYPAL_CLIENT_SECRET = 'YOUR_PAYPAL_CLIENT_SECRET'
+PAYPAL_MODE = 'sandbox'  # 'sandbox' or 'live'
+PAYPAL_RETURN_URL = 'http://localhost:8000/panel/payment/paypal/return/'
+PAYPAL_CANCEL_URL = 'http://localhost:8000/panel/payment/paypal/cancel/'
+
+# Stripe Settings
+STRIPE_PUBLISHABLE_KEY = 'YOUR_STRIPE_PUBLISHABLE_KEY'
+STRIPE_SECRET_KEY = 'YOUR_STRIPE_SECRET_KEY'
+STRIPE_WEBHOOK_SECRET = 'YOUR_STRIPE_WEBHOOK_SECRET'
+STRIPE_CURRENCY = 'usd'

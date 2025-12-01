@@ -4,7 +4,9 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.contrib.auth.models import User
 from django.http import JsonResponse, HttpResponse
+from django.conf import settings
 from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import csrf_exempt
 from django.utils import translation
 from django.db.models import Sum, Count, Q
 from django.utils import timezone
@@ -19,6 +21,7 @@ import qrcode
 from io import BytesIO
 import base64
 import secrets
+import stripe
 
 from .models import (
     UserProfile, Service, ServiceCategory, Order, SubscriptionPackage,
@@ -1422,12 +1425,37 @@ def add_funds(request):
                 status='pending',
             )
             
-            # TODO: Integrate with actual payment gateway
-            # For now, we'll simulate payment processing
-            # In production, this would redirect to payment gateway or process payment
+            # Process payment based on method
+            from .payment_gateways import create_paypal_payment, create_stripe_payment_intent
+            from django.conf import settings
             
-            messages.success(request, f'Payment request created. Transaction ID: {transaction_id}. Please complete the payment.')
-            return redirect('transaction_logs')
+            if method == 'paypal':
+                approval_url, error = create_paypal_payment(payment)
+                if approval_url:
+                    return redirect(approval_url)
+                else:
+                    messages.error(request, f'PayPal payment creation failed: {error}')
+                    payment.status = 'failed'
+                    payment.save()
+                    
+            elif method == 'stripe':
+                client_secret, error = create_stripe_payment_intent(payment)
+                if client_secret:
+                    # Store payment ID in session for confirmation
+                    request.session['stripe_payment_id'] = payment.id
+                    return render(request, 'panel/stripe_payment.html', {
+                        'payment': payment,
+                        'client_secret': client_secret,
+                        'stripe_publishable_key': settings.STRIPE_PUBLISHABLE_KEY,
+                    })
+                else:
+                    messages.error(request, f'Stripe payment creation failed: {error}')
+                    payment.status = 'failed'
+                    payment.save()
+            else:
+                # Other payment methods (manual processing)
+                messages.success(request, f'Payment request created. Transaction ID: {transaction_id}. Please complete the payment.')
+                return redirect('transaction_logs')
         
         # Show errors
         for error in errors:
@@ -1468,3 +1496,110 @@ def transaction_logs(request):
         'pending_count': pending_count,
     }
     return render(request, 'panel/transaction_logs.html', context)
+
+# PayPal Payment Return (Success)
+@login_required
+def paypal_return(request):
+    payment_id = request.GET.get('paymentId', '')
+    payer_id = request.GET.get('PayerID', '')
+    
+    if not payment_id or not payer_id:
+        messages.error(request, 'Invalid PayPal payment response')
+        return redirect('add_funds')
+    
+    from .payment_gateways import execute_paypal_payment
+    
+    success, payment, error = execute_paypal_payment(payment_id, payer_id)
+    
+    if success and payment:
+        messages.success(request, f'Payment successful! ${payment.amount} has been added to your account.')
+        return redirect('transaction_logs')
+    else:
+        messages.error(request, f'Payment failed: {error}')
+        return redirect('add_funds')
+
+# PayPal Payment Cancel
+@login_required
+def paypal_cancel(request):
+    payment_id = request.GET.get('token', '')
+    
+    if payment_id:
+        try:
+            from .payment_gateways import paypalrestsdk
+            paypal_payment = paypalrestsdk.Payment.find(payment_id)
+            if paypal_payment:
+                try:
+                    payment = Payment.objects.get(gateway_payment_id=payment_id)
+                    payment.status = 'canceled'
+                    payment.save()
+                except Payment.DoesNotExist:
+                    pass
+        except:
+            pass
+    
+    messages.warning(request, 'Payment was canceled')
+    return redirect('add_funds')
+
+# Stripe Payment Success
+@login_required
+def stripe_success(request):
+    payment_id = request.session.get('stripe_payment_id')
+    payment_intent_id = request.GET.get('payment_intent', '')
+    
+    if not payment_intent_id:
+        messages.error(request, 'Invalid payment response')
+        return redirect('add_funds')
+    
+    from .payment_gateways import confirm_stripe_payment
+    
+    success, payment, error = confirm_stripe_payment(payment_intent_id)
+    
+    if 'stripe_payment_id' in request.session:
+        del request.session['stripe_payment_id']
+    
+    if success and payment:
+        messages.success(request, f'Payment successful! ${payment.amount} has been added to your account.')
+        return redirect('transaction_logs')
+    else:
+        messages.error(request, f'Payment failed: {error}')
+        return redirect('add_funds')
+
+# Stripe Payment Cancel
+@login_required
+def stripe_cancel(request):
+    if 'stripe_payment_id' in request.session:
+        del request.session['stripe_payment_id']
+    
+    messages.warning(request, 'Payment was canceled')
+    return redirect('add_funds')
+
+# Stripe Webhook
+@csrf_exempt
+@require_http_methods(["POST"])
+def stripe_webhook(request):
+    """
+    Handle Stripe webhook events
+    """
+    
+    payload = request.body
+    sig_header = request.META.get('HTTP_STRIPE_SIGNATURE')
+    
+    try:
+        event = stripe.Webhook.construct_event(
+            payload, sig_header, settings.STRIPE_WEBHOOK_SECRET
+        )
+    except ValueError:
+        # Invalid payload
+        return HttpResponse(status=400)
+    except stripe.error.SignatureVerificationError:
+        # Invalid signature
+        return HttpResponse(status=400)
+    
+    from .payment_gateways import handle_stripe_webhook
+    
+    success, payment, error = handle_stripe_webhook(event)
+    
+    if success:
+        return JsonResponse({'status': 'success'})
+    else:
+        return JsonResponse({'status': 'error', 'message': error}, status=400)

@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Stripe Payment" %} - VinFlow{% endblock %}
+
+{% block extra_css %}
+<script src="https://js.stripe.com/v3/"></script>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto space-y-6">
+    <h1 class="text-3xl font-bold">{% trans "Complete Payment" %}</h1>
+    
+    <!-- Payment Info Card -->
+    <div class="card-glass rounded-xl p-6 gradient-purple">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <p class="text-purple-100 text-sm mb-1">{% trans "Transaction ID" %}</p>
+                <p class="text-lg font-bold text-white">{{ payment.transaction_id }}</p>
+            </div>
+            <div>
+                <p class="text-purple-100 text-sm mb-1">{% trans "Amount" %}</p>
+                <p class="text-2xl font-bold text-white">${{ payment.amount|floatformat:2 }}</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Stripe Payment Form -->
+    <div class="card-glass rounded-xl p-6">
+        <h2 class="text-xl font-bold mb-4">{% trans "Payment Details" %}</h2>
+        
+        <form id="payment-form">
+            <div id="card-element" class="mb-4">
+                <!-- Stripe Elements will create form elements here -->
+            </div>
+            
+            <!-- Display form errors -->
+            <div id="card-errors" role="alert" class="mb-4 text-red-400 text-sm"></div>
+            
+            <div class="flex gap-4">
+                <button type="submit" id="submit-button" class="btn-primary flex-1">
+                    <span id="button-text">{% trans "Pay ${{ payment.amount|floatformat:2 }}" %}</span>
+                    <span id="spinner" class="spinner hidden ml-2"></span>
+                </button>
+                <a href="{% url 'stripe_cancel' %}" class="px-6 py-3 bg-slate-700 hover:bg-slate-600 rounded-lg transition">
+                    {% trans "Cancel" %}
+                </a>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Security Info -->
+    <div class="card-glass rounded-xl p-4 bg-blue-900/20 border border-blue-500/30">
+        <div class="flex items-start space-x-3">
+            <svg class="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+            </svg>
+            <div>
+                <p class="text-sm text-gray-300">
+                    {% trans "Your payment is secured by Stripe. We never store your card details." %}
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const stripe = Stripe('{{ stripe_publishable_key }}');
+const elements = stripe.elements();
+const cardElement = elements.create('card', {
+    style: {
+        base: {
+            color: '#e2e8f0',
+            fontFamily: 'system-ui, sans-serif',
+            fontSize: '16px',
+            '::placeholder': {
+                color: '#64748b',
+            },
+        },
+        invalid: {
+            color: '#ef4444',
+        },
+    },
+});
+
+cardElement.mount('#card-element');
+
+const form = document.getElementById('payment-form');
+const submitButton = document.getElementById('submit-button');
+const buttonText = document.getElementById('button-text');
+const spinner = document.getElementById('spinner');
+const cardErrors = document.getElementById('card-errors');
+
+form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    
+    // Disable submit button
+    submitButton.disabled = true;
+    buttonText.textContent = '{% trans "Processing..." %}';
+    spinner.classList.remove('hidden');
+    
+    const {error, paymentIntent} = await stripe.confirmCardPayment('{{ client_secret }}', {
+        payment_method: {
+            card: cardElement,
+        }
+    });
+    
+    if (error) {
+        // Show error to customer
+        cardErrors.textContent = error.message;
+        submitButton.disabled = false;
+        buttonText.textContent = '{% trans "Pay" %} ${{ payment.amount|floatformat:2 }}';
+        spinner.classList.add('hidden');
+    } else {
+        // Payment succeeded
+        if (paymentIntent.status === 'succeeded') {
+            // Redirect to success page
+            window.location.href = '{% url "stripe_success" %}?payment_intent=' + paymentIntent.id;
+        }
+    }
+});
+
+// Display real-time validation errors
+cardElement.on('change', ({error}) => {
+    if (error) {
+        cardErrors.textContent = error.message;
+    } else {
+        cardErrors.textContent = '';
+    }
+});
+</script>
+{% endblock %}
+

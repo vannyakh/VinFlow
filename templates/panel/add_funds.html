@@ -58,17 +58,65 @@
                 <label for="method" class="block text-sm font-medium mb-2">
                     {% trans "Payment Method" %} <span class="text-red-400">*</span>
                 </label>
-                <select 
-                    id="method" 
-                    name="method" 
-                    required
-                    class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 focus:border-purple-500 focus:outline-none"
-                >
-                    <option value="">{% trans "Select a payment method" %}</option>
-                    {% for method_code, method_name in payment_methods %}
-                        <option value="{{ method_code }}">{{ method_name }}</option>
-                    {% endfor %}
-                </select>
+                
+                <!-- Popular Payment Methods (Cards) -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                    <label class="relative flex items-center p-4 bg-slate-700 border-2 border-slate-600 rounded-lg cursor-pointer hover:border-purple-500 transition has-[:checked]:border-purple-500">
+                        <input type="radio" name="method" value="paypal" class="sr-only peer" required>
+                        <div class="flex items-center space-x-3 flex-1">
+                            <svg class="w-8 h-8 text-blue-500" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.026.382 5.474 0 5.998 0h7.46c2.57 0 4.578.543 5.69 1.81 1.174 1.351 1.05 3.3.93 4.855-.021.24-.042.48-.062.72-.077.857-.155 1.714-.211 2.529-.23 3.339-.313 4.653-.313 5.192 0 .577-.192 1.11-.573 1.54a3.3 3.3 0 0 1-2.29 1.01c-.26.01-.52.02-.78.02h-3.93c-.63 0-1.19.39-1.42.97l-1.75 3.99a2.11 2.11 0 0 1-1.9 1.23H9.23a1.08 1.08 0 0 1-1.08-1.08v-.01a1.08 1.08 0 0 1 1.08-1.08h1.75c.28 0 .53-.16.66-.41l1.85-4.2a.77.77 0 0 0-.69-1.06H8.05c-.63 0-1.19.39-1.42.97l-1.75 3.99a2.11 2.11 0 0 1-1.9 1.23H2.47z"/>
+                            </svg>
+                            <div>
+                                <div class="font-semibold">PayPal</div>
+                                <div class="text-xs text-gray-400">{% trans "Secure payment" %}</div>
+                            </div>
+                        </div>
+                        <svg class="w-5 h-5 text-purple-500 opacity-0 peer-checked:opacity-100" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                        </svg>
+                    </label>
+                    
+                    <label class="relative flex items-center p-4 bg-slate-700 border-2 border-slate-600 rounded-lg cursor-pointer hover:border-purple-500 transition has-[:checked]:border-purple-500">
+                        <input type="radio" name="method" value="stripe" class="sr-only peer" required>
+                        <div class="flex items-center space-x-3 flex-1">
+                            <svg class="w-8 h-8 text-indigo-500" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.975 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 4.039 2.467 5.76 6.476 7.219 2.585.92 3.445 1.574 3.445 2.583 0 .98-.84 1.545-2.354 1.545-1.875 0-4.965-.921-6.99-2.109l-.9 5.555C5.175 22.99 8.385 24 11.714 24c2.641 0 4.857-.624 6.328-1.813 1.664-1.305 2.525-3.236 2.525-5.732 0-4.128-2.524-5.851-6.594-7.305h.003z"/>
+                            </svg>
+                            <div>
+                                <div class="font-semibold">Stripe</div>
+                                <div class="text-xs text-gray-400">{% trans "Credit/Debit card" %}</div>
+                            </div>
+                        </div>
+                        <svg class="w-5 h-5 text-purple-500 opacity-0 peer-checked:opacity-100" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                        </svg>
+                    </label>
+                </div>
+                
+                <!-- Other Payment Methods (Dropdown) -->
+                <details class="mb-3">
+                    <summary class="cursor-pointer text-sm text-gray-400 hover:text-gray-300 mb-2">
+                        {% trans "Other payment methods" %}
+                    </summary>
+                    <select 
+                        id="method-other" 
+                        name="method" 
+                        class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 focus:border-purple-500 focus:outline-none mt-2"
+                        onchange="if(this.value) { document.querySelectorAll('input[name=method]').forEach(el => el.checked = false); }"
+                    >
+                        <option value="">{% trans "Select a payment method" %}</option>
+                        {% for method_code, method_name in payment_methods %}
+                            {% if method_code != 'paypal' and method_code != 'stripe' %}
+                                <option value="{{ method_code }}">{{ method_name }}</option>
+                            {% endif %}
+                        {% endfor %}
+                    </select>
+                </details>
+                
+                <p class="text-xs text-gray-400 mt-2">
+                    {% trans "PayPal and Stripe are secure payment gateways. Your payment information is encrypted and secure." %}
+                </p>
             </div>
             
             <!-- Quick Amount Buttons -->

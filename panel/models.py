@@ -168,6 +168,8 @@ class Coupon(models.Model):
 # Payment Transactions
 class Payment(models.Model):
     PAYMENT_METHODS = [
+        ('paypal', 'PayPal'),
+        ('stripe', 'Stripe'),
         ('aba', 'ABA PayWay'),
         ('wing', 'Wing Bank'),
         ('pipay', 'Pi Pay'),
@@ -190,8 +192,12 @@ class Payment(models.Model):
     method = models.CharField(max_length=20, choices=PAYMENT_METHODS)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     gateway_response = models.JSONField(default=dict, blank=True)
+    gateway_payment_id = models.CharField(max_length=255, blank=True)  # PayPal/Stripe payment ID
     created_at = models.DateTimeField(auto_now_add=True)
     completed_at = models.DateTimeField(null=True, blank=True)
+    
+    def __str__(self):
+        return f"{self.transaction_id} - {self.user.username} - ${self.amount}"
 
 # Ticket Support System
 class Ticket(models.Model):
