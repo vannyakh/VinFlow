@@ -1,0 +1,93 @@
+{% extends 'panel/admin/base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "User Groups & Permissions" %} - VinFlow{% endblock %}
+
+{% block admin_content %}
+<div class="space-y-6">
+    <div class="flex justify-between items-center">
+        <h1 class="text-3xl font-bold">{% trans "User Groups & Permissions" %}</h1>
+        <a href="/django-admin/auth/group/add/" target="_blank" class="btn-primary">
+            {% trans "Create New Group" %}
+        </a>
+    </div>
+    
+    <p class="text-gray-400 text-sm">
+        {% trans "Manage user groups and their permissions. Groups allow you to assign multiple permissions to users at once." %}
+        <a href="/django-admin/auth/group/" target="_blank" class="text-cyan-400 hover:underline">{% trans "Advanced Management" %}</a>
+    </p>
+    
+    <!-- Search -->
+    <div class="card-glass rounded-xl p-4">
+        <form method="get" class="flex gap-4">
+            <input type="text" name="search" value="{{ search }}" placeholder="{% trans 'Search groups...' %}" class="flex-1 bg-slate-700 border border-slate-600 rounded-lg px-4 py-2">
+            <button type="submit" class="btn-primary">{% trans "Search" %}</button>
+        </form>
+    </div>
+    
+    <!-- Groups Table -->
+    <div class="card-glass rounded-xl p-6">
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="border-b border-slate-700">
+                        <th class="text-left py-3 px-4">{% trans "Group Name" %}</th>
+                        <th class="text-left py-3 px-4">{% trans "Users" %}</th>
+                        <th class="text-left py-3 px-4">{% trans "Permissions" %}</th>
+                        <th class="text-left py-3 px-4">{% trans "Actions" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for group in groups %}
+                    <tr class="border-b border-slate-800 hover:bg-slate-800/50">
+                        <td class="py-3 px-4 font-semibold">{{ group.name }}</td>
+                        <td class="py-3 px-4">
+                            <span class="px-2 py-1 rounded text-xs bg-blue-900/50 text-blue-400">
+                                {{ group.user_set.count }} {% trans "users" %}
+                            </span>
+                        </td>
+                        <td class="py-3 px-4">
+                            <span class="px-2 py-1 rounded text-xs bg-green-900/50 text-green-400">
+                                {{ group.permissions.count }} {% trans "permissions" %}
+                            </span>
+                        </td>
+                        <td class="py-3 px-4">
+                            <div class="flex gap-2">
+                                <a href="/django-admin/auth/group/{{ group.id }}/change/" target="_blank" class="text-xs px-2 py-1 bg-purple-600 hover:bg-purple-700 rounded">
+                                    {% trans "Edit" %}
+                                </a>
+                                <a href="/django-admin/auth/group/{{ group.id }}/delete/" target="_blank" class="text-xs px-2 py-1 bg-red-600 hover:bg-red-700 rounded">
+                                    {% trans "Delete" %}
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="py-8 text-center text-gray-400">
+                            {% trans "No groups found" %}
+                            <br>
+                            <a href="/django-admin/auth/group/add/" target="_blank" class="text-cyan-400 hover:underline mt-2 inline-block">
+                                {% trans "Create your first group" %}
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Permissions Info -->
+    <div class="card-glass rounded-xl p-6">
+        <h2 class="text-xl font-bold mb-4">{% trans "About Groups & Permissions" %}</h2>
+        <div class="space-y-2 text-gray-400 text-sm">
+            <p>• <strong class="text-white">{% trans "Groups" %}:</strong> {% trans "Collections of permissions that can be assigned to multiple users" %}</p>
+            <p>• <strong class="text-white">{% trans "Permissions" %}:</strong> {% trans "Specific actions users can perform (e.g., 'Can add order', 'Can change service')" %}</p>
+            <p>• <strong class="text-white">{% trans "Custom Roles" %}:</strong> {% trans "Your system uses custom roles (Admin, Reseller, User) which work alongside Django groups" %}</p>
+            <p>• <strong class="text-white">{% trans "Best Practice" %}:</strong> {% trans "Use groups for fine-grained permissions, and custom roles for high-level access control" %}</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

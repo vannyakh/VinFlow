@@ -30,9 +30,11 @@
                         <th class="text-left py-3 px-4">{% trans "Username" %}</th>
                         <th class="text-left py-3 px-4">{% trans "Email" %}</th>
                         <th class="text-left py-3 px-4">{% trans "Role" %}</th>
+                        <th class="text-left py-3 px-4">{% trans "Groups" %}</th>
                         <th class="text-left py-3 px-4">{% trans "Balance" %}</th>
                         <th class="text-left py-3 px-4">{% trans "Total Spent" %}</th>
                         <th class="text-left py-3 px-4">{% trans "Joined" %}</th>
+                        <th class="text-left py-3 px-4">{% trans "Actions" %}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -41,26 +43,110 @@
                         <td class="py-3 px-4">{{ user.username }}</td>
                         <td class="py-3 px-4">{{ user.email }}</td>
                         <td class="py-3 px-4">
-                            <span class="px-2 py-1 rounded text-xs
-                                {% if user.profile.role == 'admin' %}bg-purple-900/50 text-purple-400
-                                {% elif user.profile.role == 'reseller' %}bg-cyan-900/50 text-cyan-400
-                                {% else %}bg-slate-700 text-gray-300{% endif %}">
-                                {{ user.profile.get_role_display }}
-                            </span>
+                            <form method="post" action="{% url 'admin_edit_user_role' user.id %}" class="inline-block" onsubmit="return confirm('{% trans 'Are you sure you want to change this user\'s role?' %}');">
+                                {% csrf_token %}
+                                <select name="role" onchange="this.form.submit()" class="bg-slate-700 border border-slate-600 rounded px-2 py-1 text-xs
+                                    {% if user.profile.role == 'admin' %}text-purple-400
+                                    {% elif user.profile.role == 'reseller' %}text-cyan-400
+                                    {% else %}text-gray-300{% endif %}">
+                                    <option value="user" {% if user.profile.role == 'user' %}selected{% endif %}>{% trans "User" %}</option>
+                                    <option value="reseller" {% if user.profile.role == 'reseller' %}selected{% endif %}>{% trans "Reseller" %}</option>
+                                    <option value="admin" {% if user.profile.role == 'admin' %}selected{% endif %}>{% trans "Admin" %}</option>
+                                </select>
+                            </form>
+                        </td>
+                        <td class="py-3 px-4">
+                            <div class="flex flex-wrap gap-1">
+                                {% for group in user.groups.all %}
+                                <span class="px-2 py-1 rounded text-xs bg-blue-900/50 text-blue-400">{{ group.name }}</span>
+                                {% empty %}
+                                <span class="text-xs text-gray-500">{% trans "No groups" %}</span>
+                                {% endfor %}
+                            </div>
                         </td>
                         <td class="py-3 px-4">${{ user.profile.balance|floatformat:2 }}</td>
                         <td class="py-3 px-4">${{ user.profile.total_spent|floatformat:2 }}</td>
                         <td class="py-3 px-4 text-sm text-gray-400">{{ user.date_joined|date:"M d, Y" }}</td>
+                        <td class="py-3 px-4">
+                            <div class="flex gap-2">
+                                <button onclick="showGroupModal({{ user.id }}, '{{ user.username }}', [{% for group in user.groups.all %}{{ group.id }}{% if not forloop.last %},{% endif %}{% endfor %}])" class="text-xs px-2 py-1 bg-blue-600 hover:bg-blue-700 rounded">
+                                    {% trans "Manage Groups" %}
+                                </button>
+                            </div>
+                        </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="6" class="py-8 text-center text-gray-400">{% trans "No users found" %}</td>
+                        <td colspan="8" class="py-8 text-center text-gray-400">{% trans "No users found" %}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
     </div>
+
+    <!-- Group Management Modal -->
+    <div id="groupModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div class="bg-slate-800 rounded-xl p-6 max-w-md w-full mx-4">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold">{% trans "Manage Groups for" %} <span id="modalUsername"></span></h3>
+                <button onclick="closeGroupModal()" class="text-gray-400 hover:text-white">✕</button>
+            </div>
+            <form id="groupForm" method="post" action="">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="update">
+                <div class="space-y-3 mb-4 max-h-64 overflow-y-auto" id="groupsList">
+                    {% for group in all_groups %}
+                    <label class="flex items-center gap-2 p-2 hover:bg-slate-700 rounded cursor-pointer">
+                        <input type="checkbox" name="groups" value="{{ group.id }}" class="rounded group-checkbox">
+                        <span class="flex-1">{{ group.name }}</span>
+                        <span class="text-xs text-gray-400">({{ group.permissions.count }} {% trans "perms" %})</span>
+                    </label>
+                    {% empty %}
+                    <p class="text-gray-400 text-sm">{% trans "No groups available. Create groups in Django admin." %}</p>
+                    {% endfor %}
+                </div>
+                <div class="flex gap-2">
+                    <button type="submit" name="action" value="update" class="btn-primary flex-1">{% trans "Update Groups" %}</button>
+                    <button type="button" onclick="closeGroupModal()" class="btn-secondary flex-1">{% trans "Cancel" %}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function showGroupModal(userId, username, userGroupIds) {
+            document.getElementById('modalUsername').textContent = username;
+            // Update form action with current user ID
+            const form = document.getElementById('groupForm');
+            const baseUrl = '{% url "admin_assign_user_group" 999 %}'.replace('999', userId.toString());
+            form.action = baseUrl;
+            
+            // Update checkboxes based on user's current groups
+            const checkboxes = document.querySelectorAll('.group-checkbox');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = userGroupIds.includes(parseInt(checkbox.value));
+            });
+            
+            document.getElementById('groupModal').classList.remove('hidden');
+        }
+        
+        function closeGroupModal() {
+            document.getElementById('groupModal').classList.add('hidden');
+        }
+        
+        // Close modal on outside click
+        document.addEventListener('DOMContentLoaded', function() {
+            const modal = document.getElementById('groupModal');
+            if (modal) {
+                modal.addEventListener('click', function(e) {
+                    if (e.target === this) {
+                        closeGroupModal();
+                    }
+                });
+            }
+        });
+    </script>
 </div>
 {% endblock %}
 

@@ -28,6 +28,7 @@
     <!-- Khmer OS Font -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Khmer:wght@400;500;600;700&display=swap" rel="stylesheet">
     
     <style>
@@ -116,33 +117,6 @@
             100% { transform: rotate(360deg); }
         }
         
-        /* Alert animations */
-        @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        
-        .animate-slide-down {
-            animation: slideDown 0.3s ease-out;
-        }
-        
-        /* Auto-hide alerts after 5 seconds */
-        .alert-auto-hide {
-            animation: slideDown 0.3s ease-out, fadeOut 0.3s ease-in 4.7s forwards;
-        }
-        
-        @keyframes fadeOut {
-            to {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-        }
         
         /* Mobile sidebar menu */
         .mobile-sidebar {
@@ -227,7 +201,6 @@
                                         {{ user.username|first|upper }}
                                     </div>
                                 {% endif %}
-                                <span class="hidden md:block text-sm font-medium">{{ user.username }}</span>
                                 <svg class="w-4 h-4 hidden md:block" :class="{'rotate-180': open}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                                 </svg>
@@ -479,50 +452,29 @@
         </aside>
     </nav>
     
-    <!-- Alert Messages -->
+    <!-- Messages data for SweetAlert2 -->
     {% if messages %}
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4" id="alert-container">
+    <script id="messages-data" type="application/json">
+        [
             {% for message in messages %}
-                <div class="alert mb-3 p-4 rounded-lg flex items-center justify-between animate-slide-down {% if message.tags == 'error' %}bg-red-900/80 border border-red-600 text-red-100{% elif message.tags == 'success' %}bg-green-900/80 border border-green-600 text-green-100{% elif message.tags == 'warning' %}bg-yellow-900/80 border border-yellow-600 text-yellow-100{% else %}bg-blue-900/80 border border-blue-600 text-blue-100{% endif %}" role="alert">
-                    <div class="flex items-center space-x-3">
-                        {% if message.tags == 'error' %}
-                            <svg class="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
-                            </svg>
-                        {% elif message.tags == 'success' %}
-                            <svg class="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                            </svg>
-                        {% elif message.tags == 'warning' %}
-                            <svg class="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-                            </svg>
-                        {% else %}
-                            <svg class="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
-                            </svg>
-                        {% endif %}
-                        <span>{{ message }}</span>
-                    </div>
-                    <button onclick="this.parentElement.remove()" class="ml-4 text-current opacity-70 hover:opacity-100 transition">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                    </button>
-                </div>
+            {
+                "text": "{{ message|escapejs }}",
+                "type": "{{ message.tags|default:'info' }}"
+            }{% if not forloop.last %},{% endif %}
             {% endfor %}
-        </div>
+        ]
+    </script>
     {% endif %}
     
     <!-- Main Content -->
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <main class="max-w-7xl min-h-[calc(100vh-128px)] mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {% block content %}{% endblock %}
     </main>
     
     <!-- Footer -->
     <footer class="mt-16 border-t border-slate-700 py-8">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-gray-400">
-            <p>&copy; 2024 VinFlow SMM Panel. {% trans "All rights reserved." %}</p>
+            <p>&copy; 2026 VinFlow SMM Panel. {% trans "All rights reserved." %}</p>
         </div>
     </footer>
     
@@ -566,23 +518,78 @@
             evt.detail.headers['X-CSRFToken'] = '{{ csrf_token }}';
         });
         
-        // Auto-hide alerts after 5 seconds
+        // SweetAlert2 configuration for dark theme
+        const swalTheme = {
+            colorScheme: 'dark',
+            background: '#1e293b',
+            color: '#f1f5f9',
+            confirmButtonColor: '#7c3aed',
+            cancelButtonColor: '#64748b',
+            denyButtonColor: '#ef4444',
+        };
+        
+        // Display Django messages using SweetAlert2
         document.addEventListener('DOMContentLoaded', function() {
-            const alerts = document.querySelectorAll('.alert');
-            alerts.forEach(function(alert) {
-                // Add auto-hide class for fade out animation
-                alert.classList.add('alert-auto-hide');
-                
-                // Remove after 5 seconds
-                setTimeout(function() {
-                    alert.style.transition = 'opacity 0.3s ease-out, transform 0.3s ease-out';
-                    alert.style.opacity = '0';
-                    alert.style.transform = 'translateY(-10px)';
-                    setTimeout(function() {
-                        alert.remove();
-                    }, 300);
-                }, 5000);
-            });
+            const messagesData = document.getElementById('messages-data');
+            if (messagesData) {
+                try {
+                    const messages = JSON.parse(messagesData.textContent);
+                    let delay = 0;
+                    
+                    messages.forEach(function(message) {
+                        setTimeout(function() {
+                            let icon = 'info';
+                            let title = '{% trans "Information" %}';
+                            
+                            // Map Django message tags to SweetAlert2 types
+                            switch(message.type) {
+                                case 'error':
+                                case 'danger':
+                                    icon = 'error';
+                                    title = '{% trans "Error" %}';
+                                    break;
+                                case 'success':
+                                    icon = 'success';
+                                    title = '{% trans "Success" %}';
+                                    break;
+                                case 'warning':
+                                    icon = 'warning';
+                                    title = '{% trans "Warning" %}';
+                                    break;
+                                case 'info':
+                                default:
+                                    icon = 'info';
+                                    title = '{% trans "Information" %}';
+                                    break;
+                            }
+                            
+                            Swal.fire({
+                                ...swalTheme,
+                                icon: icon,
+                                title: title,
+                                text: message.text,
+                                toast: true,
+                                position: 'top-end',
+                                showConfirmButton: false,
+                                timer: 5000,
+                                timerProgressBar: true,
+                                didOpen: (toast) => {
+                                    toast.addEventListener('mouseenter', Swal.stopTimer);
+                                    toast.addEventListener('mouseleave', Swal.resumeTimer);
+                                }
+                            });
+                        }, delay);
+                        
+                        // Stagger multiple messages
+                        delay += 300;
+                    });
+                    
+                    // Remove the messages data element after processing
+                    messagesData.remove();
+                } catch (e) {
+                    console.error('Error parsing messages:', e);
+                }
+            }
         });
     </script>
     

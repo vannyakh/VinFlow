@@ -37,7 +37,36 @@ from django.contrib.auth.models import User
 @receiver(post_save, sender=User)
 def create_user_profile(sender, instance, created, **kwargs):
     if created:
-        UserProfile.objects.create(user=instance)
+        # Determine role: superuser gets 'admin', otherwise 'user'
+        default_role = 'admin' if instance.is_superuser else 'user'
+        # Use get_or_create to avoid duplicates if signal fires multiple times
+        profile, _ = UserProfile.objects.get_or_create(
+            user=instance,
+            defaults={'role': default_role}
+        )
+        # If user is superuser but profile role is not admin, update it
+        if instance.is_superuser and profile.role != 'admin':
+            profile.role = 'admin'
+            profile.save()
+        # Save to generate api_key and referral_code
+        elif not profile.api_key or not profile.referral_code:
+            profile.save()
+
+# Helper function to ensure user profile exists
+def ensure_user_profile(user):
+    """Ensure user has a profile, create one if missing. Superusers get admin role."""
+    try:
+        profile = user.profile
+        # If user is superuser but profile role is not admin, update it
+        if user.is_superuser and profile.role != 'admin':
+            profile.role = 'admin'
+            profile.save()
+        return profile
+    except UserProfile.DoesNotExist:
+        # Determine role: superuser gets 'admin', otherwise 'user'
+        role = 'admin' if user.is_superuser else 'user'
+        profile = UserProfile.objects.create(user=user, role=role)
+        return profile
 
 # Language switching - Enhanced with Django i18n
 @require_http_methods(["POST"])
@@ -120,12 +149,18 @@ def register(request):
                     password=password
                 )
                 
+                # Ensure profile is created (should be done by signal, but double-check)
+                profile, _ = UserProfile.objects.get_or_create(
+                    user=user,
+                    defaults={'role': 'user'}
+                )
+                
                 # Handle referral code
                 if referral_code:
                     try:
                         referrer = UserProfile.objects.get(referral_code=referral_code.upper())
-                        user.profile.referred_by = referrer.user
-                        user.profile.save()
+                        profile.referred_by = referrer.user
+                        profile.save()
                     except UserProfile.DoesNotExist:
                         pass  # Invalid referral code, ignore
                 
@@ -177,9 +212,24 @@ def user_login(request):
             user = authenticate(request, username=username, password=password)
             if user is not None:
                 if user.is_active:
+                    # Ensure user profile exists (create if missing)
+                    # Superusers get admin role, others get user role
+                    default_role = 'admin' if user.is_superuser else 'user'
+                    profile, created = UserProfile.objects.get_or_create(
+                        user=user,
+                        defaults={'role': default_role}
+                    )
+                    # If user is superuser but profile role is not admin, update it
+                    if user.is_superuser and profile.role != 'admin':
+                        profile.role = 'admin'
+                        profile.save()
+                    elif created:
+                        # Profile was just created, save it to generate api_key and referral_code
+                        profile.save()
+                    
                     # Check if 2FA is enabled
                     try:
-                        if user.profile.two_factor_enabled:
+                        if profile.two_factor_enabled:
                             # Store user ID in session for 2FA verification
                             request.session['2fa_user_id'] = user.id
                             request.session['2fa_verified'] = False
@@ -189,17 +239,17 @@ def user_login(request):
                             login(request, user)
                             # Set language from user profile
                             try:
-                                if user.profile.language:
-                                    translation.activate(user.profile.language)
-                                    request.session['django_language'] = user.profile.language
+                                if profile.language:
+                                    translation.activate(profile.language)
+                                    request.session['django_language'] = profile.language
                             except:
                                 pass
                             
                             messages.success(request, f'Welcome back, {user.username}!')
                             next_url = request.GET.get('next', 'dashboard')
                             return redirect(next_url)
-                    except:
-                        # Profile might not exist, proceed with normal login
+                    except Exception as e:
+                        # Fallback: proceed with normal login even if profile access fails
                         login(request, user)
                         messages.success(request, f'Welcome back, {user.username}!')
                         next_url = request.GET.get('next', 'dashboard')
@@ -215,7 +265,11 @@ def user_login(request):
 @login_required
 def dashboard(request):
     user = request.user
-    profile = user.profile
+    # Ensure profile exists
+    profile, _ = UserProfile.objects.get_or_create(
+        user=user,
+        defaults={'role': 'user'}
+    )
     
     # Statistics
     total_orders = Order.objects.filter(user=user).count()
@@ -316,10 +370,11 @@ def create_order(request):
             drip_feed_days=drip_feed_days if drip_feed else 0,
         )
         
-        # Deduct balance
-        request.user.profile.balance -= final_charge
-        request.user.profile.total_spent += final_charge
-        request.user.profile.save()
+        # Ensure profile exists and deduct balance
+        profile = ensure_user_profile(request.user)
+        profile.balance -= final_charge
+        profile.total_spent += final_charge
+        profile.save()
         
         # Place order to supplier (async)
         from .tasks import place_order_to_supplier
@@ -463,7 +518,8 @@ def ticket_detail(request, ticket_id):
     
     if request.method == 'POST':
         message = request.POST.get('message')
-        is_admin = request.user.profile.role == 'admin'
+        profile = ensure_user_profile(request.user)
+        is_admin = profile.role == 'admin'
         
         TicketMessage.objects.create(
             ticket=ticket,
@@ -534,6 +590,9 @@ def free_trial(request):
 # Profile
 @login_required
 def profile(request):
+    # Ensure profile exists
+    profile = ensure_user_profile(request.user)
+    
     if request.method == 'POST':
         try:
             # Handle avatar upload
@@ -547,9 +606,9 @@ def profile(request):
                     allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
                     if avatar.content_type in allowed_types:
                         # Delete old avatar if exists
-                        if request.user.profile.avatar:
-                            request.user.profile.avatar.delete(save=False)
-                        request.user.profile.avatar = avatar
+                        if profile.avatar:
+                            profile.avatar.delete(save=False)
+                        profile.avatar = avatar
                         messages.success(request, 'Avatar updated successfully!')
                     else:
                         messages.error(request, 'Invalid file type. Please upload JPEG, PNG, GIF, or WebP image.')
@@ -557,7 +616,7 @@ def profile(request):
             # Update language
             if 'language' in request.POST:
                 language = request.POST.get('language', 'en')
-                request.user.profile.language = language
+                profile.language = language
                 
                 # Activate language and save to session
                 translation.activate(language)
@@ -582,7 +641,7 @@ def profile(request):
                         messages.error(request, 'Invalid email address')
             
             # Save profile
-            request.user.profile.save()
+            profile.save()
             request.user.save()
             
             if 'language' not in request.POST:
@@ -687,7 +746,7 @@ def verify_2fa(request):
 # 2FA Setup
 @login_required
 def setup_2fa(request):
-    profile = request.user.profile
+    profile = ensure_user_profile(request.user)
     
     if request.method == 'POST':
         action = request.POST.get('action')
@@ -789,7 +848,7 @@ def setup_2fa(request):
 @login_required
 @require_http_methods(["POST"])
 def disable_2fa(request):
-    profile = request.user.profile
+    profile = ensure_user_profile(request.user)
     
     # Verify password or require 2FA code to disable
     code = request.POST.get('code', '').strip()
@@ -828,7 +887,7 @@ def disable_2fa(request):
 @login_required
 @require_http_methods(["POST"])
 def regenerate_backup_codes(request):
-    profile = request.user.profile
+    profile = ensure_user_profile(request.user)
     
     if not profile.two_factor_enabled:
         messages.error(request, '2FA is not enabled')
@@ -862,7 +921,11 @@ def regenerate_backup_codes(request):
 # Admin Dashboard
 @login_required
 def admin_dashboard(request):
-    if request.user.profile.role != 'admin':
+    # Ensure profile exists (superusers automatically get admin role)
+    profile = ensure_user_profile(request.user)
+    
+    # Allow access if user is superuser OR has admin role
+    if not (request.user.is_superuser or profile.role == 'admin'):
         messages.error(request, 'Access denied')
         return redirect('dashboard')
     
@@ -916,7 +979,15 @@ from functools import wraps
 def admin_required(view_func):
     @wraps(view_func)
     def wrapper(request, *args, **kwargs):
-        if not request.user.is_authenticated or request.user.profile.role != 'admin':
+        if not request.user.is_authenticated:
+            messages.error(request, 'Access denied')
+            return redirect('dashboard')
+        
+        # Ensure profile exists (superusers automatically get admin role)
+        profile = ensure_user_profile(request.user)
+        
+        # Allow access if user is superuser OR has admin role
+        if not (request.user.is_superuser or profile.role == 'admin'):
             messages.error(request, 'Access denied')
             return redirect('dashboard')
         return view_func(request, *args, **kwargs)
@@ -1162,10 +1233,12 @@ def admin_tickets(request):
 @login_required
 @admin_required
 def admin_users(request):
+    from django.contrib.auth.models import Group
+    
     search = request.GET.get('search', '')
     role_filter = request.GET.get('role', '')
     
-    users = User.objects.all()
+    users = User.objects.all().prefetch_related('groups', 'profile')
     
     if search:
         users = users.filter(
@@ -1178,13 +1251,88 @@ def admin_users(request):
     
     users = users.order_by('-date_joined')[:100]
     
+    # Get all groups for the modal
+    all_groups = Group.objects.all().prefetch_related('permissions')
+    
     context = {
         'users': users,
+        'all_groups': all_groups,
         'search': search,
         'role_filter': role_filter,
         'pending_tickets_count': Ticket.objects.filter(status__in=['open', 'in_progress']).count(),
     }
     return render(request, 'panel/admin/users.html', context)
+
+# Admin Edit User Role
+@login_required
+@admin_required
+@require_http_methods(["POST"])
+def admin_edit_user_role(request, user_id):
+    user = get_object_or_404(User, id=user_id)
+    new_role = request.POST.get('role', '').strip()
+    
+    if new_role not in ['admin', 'reseller', 'user']:
+        messages.error(request, 'Invalid role selected')
+        return redirect('admin_users')
+    
+    # Prevent admin from removing their own admin role
+    if user.id == request.user.id and new_role != 'admin':
+        messages.error(request, 'You cannot remove your own admin role')
+        return redirect('admin_users')
+    
+    try:
+        user.profile.role = new_role
+        user.profile.save()
+        messages.success(request, f'Role updated successfully for {user.username}')
+    except Exception as e:
+        messages.error(request, f'Error updating role: {str(e)}')
+    
+    return redirect('admin_users')
+
+# Admin User Groups Management
+@login_required
+@admin_required
+def admin_user_groups(request):
+    from django.contrib.auth.models import Group
+    
+    groups = Group.objects.all().prefetch_related('permissions', 'user_set')
+    search = request.GET.get('search', '')
+    
+    if search:
+        groups = groups.filter(name__icontains=search)
+    
+    context = {
+        'groups': groups,
+        'search': search,
+        'pending_tickets_count': Ticket.objects.filter(status__in=['open', 'in_progress']).count(),
+    }
+    return render(request, 'panel/admin/user_groups.html', context)
+
+# Admin Assign User to Group
+@login_required
+@admin_required
+@require_http_methods(["POST"])
+def admin_assign_user_group(request, user_id):
+    from django.contrib.auth.models import Group
+    
+    user = get_object_or_404(User, id=user_id)
+    action = request.POST.get('action', 'update')
+    
+    try:
+        if action == 'update':
+            # Get selected groups from checkbox inputs
+            selected_group_ids = request.POST.getlist('groups')
+            selected_groups = Group.objects.filter(id__in=selected_group_ids)
+            
+            # Update user's groups
+            user.groups.set(selected_groups)
+            messages.success(request, f'Groups updated successfully for {user.username}')
+        else:
+            messages.error(request, 'Invalid action')
+    except Exception as e:
+        messages.error(request, f'Error updating groups: {str(e)}')
+    
+    return redirect('admin_users')
 
 # Admin Subscribers Management
 @login_required
