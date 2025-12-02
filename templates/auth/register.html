@@ -1,0 +1,163 @@
+{% extends 'base_auth.html' %}
+{% load i18n %}
+{% load settings_tags %}
+{% get_site_setting 'site_name' 'VinFlow' as site_name %}
+{% get_site_setting 'site_logo' '' as site_logo %}
+
+{% block title %}{% trans "Sign Up" %} - {{ site_name }}{% endblock %}
+
+{% block content %}
+<div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full space-y-8">
+        <!-- Logo & Title -->
+        <div class="text-center">
+            <div class="w-20 h-20 mx-auto mb-6 flex items-center justify-center flex-shrink-0 overflow-hidden rounded-2xl shadow-2xl floating {% if not site_logo %}gradient-purple{% endif %}">
+                {% if site_logo %}
+                    {% if site_logo|slice:':4' == 'http' or site_logo|slice:':2' == '//' %}
+                        <img src="{{ site_logo }}" alt="{{ site_name }}" class="w-full h-full object-cover">
+                    {% else %}
+                        <img src="/media/{{ site_logo }}" alt="{{ site_name }}" class="w-full h-full object-cover">
+                    {% endif %}
+                {% else %}
+                    <span class="text-white font-bold text-3xl">{{ site_name|first|upper }}</span>
+                {% endif %}
+            </div>
+            <h2 class="text-4xl font-bold bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">
+                {% trans "Create Account" %}
+            </h2>
+            <p class="mt-2 text-gray-400">{% trans "Join" %} {{ site_name }} {% trans "and get started today!" %}</p>
+        </div>
+        
+        <!-- Registration Form -->
+        <div class="card-glass rounded-2xl p-8">
+            <form method="post" class="space-y-5">
+                {% csrf_token %}
+                
+                <div>
+                    <label class="block text-sm font-medium mb-2 text-gray-300">
+                        {% trans "Username" %} <span class="text-red-400">*</span>
+                    </label>
+                    <input 
+                        type="text" 
+                        name="username" 
+                        required 
+                        minlength="3"
+                        autocomplete="username"
+                        class="w-full bg-slate-800/50 border border-slate-600 rounded-lg px-4 py-2.5 text-gray-100 placeholder-gray-500 focus:border-purple-500 focus:outline-none transition" 
+                        placeholder="{% trans 'Choose a unique username' %}"
+                    >
+                    <p class="text-xs text-gray-500 mt-1">{% trans "At least 3 characters" %}</p>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium mb-2 text-gray-300">
+                        {% trans "Email" %} <span class="text-red-400">*</span>
+                    </label>
+                    <input 
+                        type="email" 
+                        name="email" 
+                        required
+                        autocomplete="email"
+                        class="w-full bg-slate-800/50 border border-slate-600 rounded-lg px-4 py-2.5 text-gray-100 placeholder-gray-500 focus:border-purple-500 focus:outline-none transition" 
+                        placeholder="your@email.com"
+                    >
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium mb-2 text-gray-300">
+                        {% trans "Password" %} <span class="text-red-400">*</span>
+                    </label>
+                    <input 
+                        type="password" 
+                        name="password" 
+                        required 
+                        minlength="8"
+                        autocomplete="new-password"
+                        class="w-full bg-slate-800/50 border border-slate-600 rounded-lg px-4 py-2.5 text-gray-100 placeholder-gray-500 focus:border-purple-500 focus:outline-none transition" 
+                        placeholder="{% trans 'Minimum 8 characters' %}"
+                    >
+                    <p class="text-xs text-gray-500 mt-1">{% trans "Use a strong password" %}</p>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium mb-2 text-gray-300">
+                        {% trans "Confirm Password" %} <span class="text-red-400">*</span>
+                    </label>
+                    <input 
+                        type="password" 
+                        name="password_confirm" 
+                        required 
+                        minlength="8"
+                        autocomplete="new-password"
+                        class="w-full bg-slate-800/50 border border-slate-600 rounded-lg px-4 py-2.5 text-gray-100 placeholder-gray-500 focus:border-purple-500 focus:outline-none transition" 
+                        placeholder="{% trans 'Re-enter your password' %}"
+                    >
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium mb-2 text-gray-300">
+                        {% trans "Referral Code" %} <span class="text-gray-500 text-xs">({% trans "Optional" %})</span>
+                    </label>
+                    <input 
+                        type="text" 
+                        name="referral_code"
+                        class="w-full bg-slate-800/50 border border-slate-600 rounded-lg px-4 py-2.5 text-gray-100 placeholder-gray-500 focus:border-purple-500 focus:outline-none transition" 
+                        placeholder="{% trans 'Enter referral code if you have one' %}"
+                    >
+                </div>
+                
+                <div class="flex items-start">
+                    <input 
+                        id="terms" 
+                        name="terms" 
+                        type="checkbox" 
+                        required
+                        class="h-4 w-4 mt-1 text-purple-600 focus:ring-purple-500 border-gray-600 rounded bg-slate-800"
+                    >
+                    <label for="terms" class="ml-2 block text-sm text-gray-400">
+                        {% trans "I agree to the" %} 
+                        <a href="#" class="text-purple-400 hover:text-purple-300">{% trans "Terms of Service" %}</a> 
+                        {% trans "and" %} 
+                        <a href="#" class="text-purple-400 hover:text-purple-300">{% trans "Privacy Policy" %}</a>
+                    </label>
+                </div>
+                
+                <button type="submit" class="w-full btn-primary py-3">
+                    {% trans "Create Account" %}
+                </button>
+            </form>
+            
+            <div class="mt-6">
+                <div class="relative">
+                    <div class="absolute inset-0 flex items-center">
+                        <div class="w-full border-t border-slate-600"></div>
+                    </div>
+                    <div class="relative flex justify-center text-sm">
+                        <span class="px-2 bg-slate-800/90 text-gray-400">{% trans "Already have an account?" %}</span>
+                    </div>
+                </div>
+                
+                <div class="mt-6 text-center">
+                    <a href="{% url 'login' %}" class="inline-flex items-center text-sm font-medium text-purple-400 hover:text-purple-300 transition">
+                        {% trans "Sign in instead" %}
+                        <svg class="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+                        </svg>
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Back to Home -->
+        <div class="text-center">
+            <a href="/" class="inline-flex items-center text-sm text-gray-500 hover:text-gray-300 transition">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                </svg>
+                {% trans "Back to Home" %}
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

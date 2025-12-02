@@ -208,7 +208,7 @@ def register(request):
         for error in errors:
             messages.error(request, error)
     
-    return render(request, 'panel/register.html')
+    return render(request, 'auth/register.html')
 
 # User Logout
 def user_logout(request):
@@ -288,7 +288,7 @@ def user_login(request):
             else:
                 messages.error(request, 'Invalid username or password. Please try again.')
     
-    return render(request, 'panel/login.html')
+    return render(request, 'auth/login.html')
 
 # Dashboard
 @login_required
@@ -778,7 +778,7 @@ def verify_2fa(request):
         else:
             messages.error(request, 'Please enter a verification code')
     
-    return render(request, 'panel/verify_2fa.html', {'user': user})
+    return render(request, 'auth/verify_2fa.html', {'user': user})
 
 # 2FA Setup
 @login_required

@@ -1,0 +1,289 @@
+{% load i18n %}
+{% load static %}
+{% load settings_tags %}
+{% get_current_language as CURRENT_LANGUAGE %}
+{% get_site_setting 'site_name' 'VinFlow' as site_name %}
+{% get_site_setting 'site_logo' '' as site_logo %}
+{% get_site_setting 'site_description' 'Professional SMM Panel for Social Media Marketing' as site_description %}
+{% get_site_setting 'site_url' '' as site_url %}
+{% get_site_setting 'favicon' '' as favicon %}
+{% get_site_setting 'google_analytics_id' '' as google_analytics_id %}
+<!DOCTYPE html>
+<html lang="{{ CURRENT_LANGUAGE }}" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="{% block meta_description %}{{ site_description }}{% endblock %}">
+    <meta name="theme-color" content="#7c3aed">
+    <meta name="robots" content="noindex, nofollow">
+    
+    <!-- Favicon -->
+    {% if favicon %}
+        {% if favicon|slice:':4' == 'http' or favicon|slice:':2' == '//' %}
+            <link rel="icon" type="image/png" href="{{ favicon }}">
+        {% else %}
+            <link rel="icon" type="image/png" href="/media/{{ favicon }}">
+        {% endif %}
+    {% endif %}
+    
+    <title>{% block title %}{{ site_name }} SMM Panel{% endblock %}</title>
+    
+    <!-- Google Analytics -->
+    {% if google_analytics_id %}
+        {% if google_analytics_id|slice:':2' == 'G-' %}
+            <script async src="https://www.googletagmanager.com/gtag/js?id={{ google_analytics_id }}"></script>
+            <script>
+                window.dataLayer = window.dataLayer || [];
+                function gtag(){dataLayer.push(arguments);}
+                gtag('js', new Date());
+                gtag('config', '{{ google_analytics_id }}');
+            </script>
+        {% endif %}
+    {% endif %}
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <!-- Khmer OS Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Khmer:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            font-family: 'Noto Sans Khmer', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+        
+        :root {
+            --primary-purple: #7c3aed;
+            --primary-cyan: #06b6d4;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+        
+        /* Animated background gradient */
+        body::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(124, 58, 237, 0.1) 0%, transparent 50%);
+            animation: rotate 20s linear infinite;
+            z-index: 0;
+        }
+        
+        @keyframes rotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .gradient-purple {
+            background: linear-gradient(135deg, var(--primary-purple) 0%, #a855f7 100%);
+        }
+        
+        .gradient-cyan {
+            background: linear-gradient(135deg, var(--primary-cyan) 0%, #22d3ee 100%);
+        }
+        
+        .card-glass {
+            background: rgba(30, 41, 59, 0.9);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        
+        .btn-primary {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            transition: all 0.3s ease-in-out;
+            background: linear-gradient(135deg, var(--primary-purple) 0%, #a855f7 100%);
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(124, 58, 237, 0.4);
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            text-align: center;
+            vertical-align: middle;
+            display: inline-block;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(124, 58, 237, 0.6);
+        }
+        
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+        
+        /* Input focus animation */
+        input:focus {
+            outline: none;
+            border-color: var(--primary-purple);
+            box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+        }
+        
+        /* Loading spinner */
+        .spinner {
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top: 3px solid var(--primary-purple);
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Floating animation for logo */
+        .floating {
+            animation: floating 3s ease-in-out infinite;
+        }
+        
+        @keyframes floating {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        /* Content wrapper to be above background */
+        .content-wrapper {
+            position: relative;
+            z-index: 1;
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="text-gray-100">
+    <!-- Messages data for SweetAlert2 -->
+    {% if messages %}
+    <script id="messages-data" type="application/json">
+        [
+            {% for message in messages %}
+            {
+                "text": "{{ message|escapejs }}",
+                "type": "{{ message.tags|default:'info' }}"
+            }{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ]
+    </script>
+    {% endif %}
+    
+    <!-- Main Content -->
+    <div class="content-wrapper">
+        {% block content %}{% endblock %}
+    </div>
+    
+    <!-- Footer -->
+    <footer class="fixed bottom-0 left-0 right-0 py-4 z-10">
+        <div class="max-w-7xl mx-auto px-4 text-center">
+            <p class="text-sm text-gray-500">
+                &copy; {% now "Y" %} {{ site_name }}. {% trans "All rights reserved." %}
+            </p>
+            <div class="mt-2 flex justify-center space-x-4 text-xs text-gray-500">
+                <a href="#" class="hover:text-purple-400 transition">{% trans "Privacy Policy" %}</a>
+                <span>•</span>
+                <a href="#" class="hover:text-purple-400 transition">{% trans "Terms of Service" %}</a>
+                <span>•</span>
+                <a href="#" class="hover:text-purple-400 transition">{% trans "Support" %}</a>
+            </div>
+        </div>
+    </footer>
+    
+    <script>
+        // SweetAlert2 configuration for dark theme
+        const swalTheme = {
+            colorScheme: 'dark',
+            background: '#1e293b',
+            color: '#f1f5f9',
+            confirmButtonColor: '#7c3aed',
+            cancelButtonColor: '#64748b',
+            denyButtonColor: '#ef4444',
+        };
+        
+        // Display Django messages using SweetAlert2
+        document.addEventListener('DOMContentLoaded', function() {
+            const messagesData = document.getElementById('messages-data');
+            if (messagesData) {
+                try {
+                    const messages = JSON.parse(messagesData.textContent);
+                    let delay = 0;
+                    
+                    messages.forEach(function(message) {
+                        setTimeout(function() {
+                            let icon = 'info';
+                            let title = '{% trans "Information" %}';
+                            
+                            // Map Django message tags to SweetAlert2 types
+                            switch(message.type) {
+                                case 'error':
+                                case 'danger':
+                                    icon = 'error';
+                                    title = '{% trans "Error" %}';
+                                    break;
+                                case 'success':
+                                    icon = 'success';
+                                    title = '{% trans "Success" %}';
+                                    break;
+                                case 'warning':
+                                    icon = 'warning';
+                                    title = '{% trans "Warning" %}';
+                                    break;
+                                case 'info':
+                                default:
+                                    icon = 'info';
+                                    title = '{% trans "Information" %}';
+                                    break;
+                            }
+                            
+                            Swal.fire({
+                                ...swalTheme,
+                                icon: icon,
+                                title: title,
+                                text: message.text,
+                                toast: true,
+                                position: 'top-end',
+                                showConfirmButton: false,
+                                timer: 5000,
+                                timerProgressBar: true,
+                                didOpen: (toast) => {
+                                    toast.addEventListener('mouseenter', Swal.stopTimer);
+                                    toast.addEventListener('mouseleave', Swal.resumeTimer);
+                                }
+                            });
+                        }, delay);
+                        
+                        // Stagger multiple messages
+                        delay += 300;
+                    });
+                    
+                    // Remove the messages data element after processing
+                    messagesData.remove();
+                } catch (e) {
+                    console.error('Error parsing messages:', e);
+                }
+            }
+        });
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
+
