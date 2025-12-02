@@ -302,3 +302,83 @@ class BlacklistEmail(models.Model):
         verbose_name = "Blacklist Email"
         verbose_name_plural = "Blacklist Emails"
         ordering = ['-created_at']
+
+# Settings/Configuration Model
+class SystemSetting(models.Model):
+    SETTING_GROUPS = [
+        ('general', 'General'),
+        ('payment', 'Payment'),
+        ('email', 'Email'),
+        ('api', 'API'),
+        ('security', 'Security'),
+        ('seo', 'SEO'),
+        ('social', 'Social Media'),
+        ('maintenance', 'Maintenance'),
+    ]
+    
+    SETTING_TYPES = [
+        ('text', 'Text'),
+        ('number', 'Number'),
+        ('boolean', 'Boolean'),
+        ('email', 'Email'),
+        ('url', 'URL'),
+        ('textarea', 'Textarea'),
+        ('json', 'JSON'),
+        ('image', 'Image'),
+        ('image_list', 'Image List'),
+    ]
+    
+    key = models.CharField(max_length=100, unique=True, help_text="Unique setting key (e.g., 'site_name', 'min_deposit')")
+    value = models.TextField(blank=True, help_text="Setting value")
+    default_value = models.TextField(blank=True, help_text="Default value if not set")
+    setting_type = models.CharField(max_length=20, choices=SETTING_TYPES, default='text')
+    group = models.CharField(max_length=20, choices=SETTING_GROUPS, default='general')
+    label = models.CharField(max_length=200, help_text="Human-readable label")
+    description = models.TextField(blank=True, help_text="Help text for this setting")
+    is_public = models.BooleanField(default=False, help_text="Can be accessed via API/public")
+    is_encrypted = models.BooleanField(default=False, help_text="Should this value be encrypted?")
+    order = models.IntegerField(default=0, help_text="Display order within group")
+    updated_at = models.DateTimeField(auto_now=True)
+    updated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='updated_settings')
+    
+    class Meta:
+        verbose_name = "System Setting"
+        verbose_name_plural = "System Settings"
+        ordering = ['group', 'order', 'key']
+    
+    def __str__(self):
+        return f"{self.label} ({self.key})"
+    
+    def get_value(self):
+        """Get the actual value, using default if empty"""
+        return self.value if self.value else self.default_value
+    
+    def get_bool_value(self):
+        """Get boolean value"""
+        if self.setting_type == 'boolean':
+            return self.get_value().lower() in ('true', '1', 'yes', 'on')
+        return False
+    
+    def get_int_value(self):
+        """Get integer value"""
+        try:
+            return int(self.get_value())
+        except (ValueError, TypeError):
+            return 0
+    
+    def get_float_value(self):
+        """Get float value"""
+        try:
+            return float(self.get_value())
+        except (ValueError, TypeError):
+            return 0.0
+    
+    def get_image_list(self):
+        """Get image list as Python list"""
+        if self.setting_type == 'image_list' and self.value:
+            try:
+                import json
+                return json.loads(self.value)
+            except:
+                return []
+        return []

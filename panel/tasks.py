@@ -3,6 +3,7 @@ import requests
 from celery import shared_task
 from django.conf import settings
 import logging
+from .settings_utils import get_setting
 
 logger = logging.getLogger(__name__)
 
@@ -13,19 +14,19 @@ def place_order_to_supplier(order_id):
         order = Order.objects.get(id=order_id)
         service = order.service
         
-        # Determine supplier API endpoint and key
+        # Determine supplier API endpoint and key from settings
         supplier_config = {
             'jap': {
-                'url': 'https://justanotherpanel.com/api/v2',
-                'key': getattr(settings, 'JAP_API_KEY', ''),
+                'url': get_setting('supplier_jap_url', 'https://justanotherpanel.com/api/v2'),
+                'key': get_setting('supplier_jap_key', getattr(settings, 'JAP_API_KEY', '')),
             },
             'peakerr': {
-                'url': 'https://peakerr.com/api/v2',
-                'key': getattr(settings, 'PEAKERR_API_KEY', ''),
+                'url': get_setting('supplier_peakerr_url', 'https://peakerr.com/api/v2'),
+                'key': get_setting('supplier_peakerr_key', getattr(settings, 'PEAKERR_API_KEY', '')),
             },
             'smmkings': {
-                'url': 'https://smmkings.com/api/v2',
-                'key': getattr(settings, 'SMMKINGS_API_KEY', ''),
+                'url': get_setting('supplier_smmkings_url', 'https://smmkings.com/api/v2'),
+                'key': get_setting('supplier_smmkings_key', getattr(settings, 'SMMKINGS_API_KEY', '')),
             },
         }
         
@@ -45,21 +46,44 @@ def place_order_to_supplier(order_id):
             payload['runs'] = order.drip_feed_days
             payload['interval'] = order.drip_feed_quantity
         
-        # Send request
-        response = requests.post(config['url'], data=payload, timeout=30)
-        data = response.json()
+        # Get timeout and retry attempts from settings
+        timeout = int(get_setting('supplier_timeout', '30'))
+        retry_attempts = int(get_setting('supplier_retry_attempts', '3'))
         
-        if response.status_code == 200 and 'order' in data:
-            order.external_order_id = str(data.get('order', ''))
-            order.status = 'Processing'
-            order.supplier_response = data
-            order.save()
-            logger.info(f"Order {order.order_id} placed successfully with supplier")
-        else:
-            order.status = 'Canceled'
-            order.supplier_response = data
-            order.save()
-            logger.error(f"Failed to place order {order.order_id}: {data}")
+        # Send request with retry logic
+        response = None
+        data = {}
+        for attempt in range(retry_attempts):
+            try:
+                response = requests.post(config['url'], data=payload, timeout=timeout)
+                data = response.json()
+                
+                if response.status_code == 200 and 'order' in data:
+                    order.external_order_id = str(data.get('order', ''))
+                    order.status = 'Processing'
+                    order.supplier_response = data
+                    order.save()
+                    logger.info(f"Order {order.order_id} placed successfully with supplier")
+                    return
+                elif attempt < retry_attempts - 1:
+                    logger.warning(f"Attempt {attempt + 1} failed for order {order.order_id}, retrying...")
+                    continue
+                else:
+                    break
+            except Exception as e:
+                if attempt < retry_attempts - 1:
+                    logger.warning(f"Attempt {attempt + 1} failed for order {order.order_id}: {str(e)}, retrying...")
+                    continue
+                else:
+                    logger.error(f"All retry attempts failed for order {order.order_id}: {str(e)}")
+                    data = {'error': str(e)}
+                    break
+        
+        # If we get here, all attempts failed
+        order.status = 'Canceled'
+        order.supplier_response = data
+        order.save()
+        logger.error(f"Failed to place order {order.order_id} after {retry_attempts} attempts: {data}")
             
     except Exception as e:
         logger.error(f"Error placing order {order_id}: {str(e)}")
@@ -81,16 +105,16 @@ def sync_order_status(order_id):
         
         supplier_config = {
             'jap': {
-                'url': 'https://justanotherpanel.com/api/v2',
-                'key': getattr(settings, 'JAP_API_KEY', ''),
+                'url': get_setting('supplier_jap_url', 'https://justanotherpanel.com/api/v2'),
+                'key': get_setting('supplier_jap_key', getattr(settings, 'JAP_API_KEY', '')),
             },
             'peakerr': {
-                'url': 'https://peakerr.com/api/v2',
-                'key': getattr(settings, 'PEAKERR_API_KEY', ''),
+                'url': get_setting('supplier_peakerr_url', 'https://peakerr.com/api/v2'),
+                'key': get_setting('supplier_peakerr_key', getattr(settings, 'PEAKERR_API_KEY', '')),
             },
             'smmkings': {
-                'url': 'https://smmkings.com/api/v2',
-                'key': getattr(settings, 'SMMKINGS_API_KEY', ''),
+                'url': get_setting('supplier_smmkings_url', 'https://smmkings.com/api/v2'),
+                'key': get_setting('supplier_smmkings_key', getattr(settings, 'SMMKINGS_API_KEY', '')),
             },
         }
         
@@ -102,7 +126,16 @@ def sync_order_status(order_id):
             'order': order.external_order_id,
         }
         
-        response = requests.post(config['url'], data=payload, timeout=30)
+        # Check if auto sync is enabled
+        auto_sync = get_setting('auto_sync_order_status', 'true').lower() == 'true'
+        if not auto_sync:
+            logger.info(f"Auto sync is disabled, skipping order {order_id}")
+            return
+        
+        # Get timeout from settings
+        timeout = int(get_setting('supplier_timeout', '30'))
+        
+        response = requests.post(config['url'], data=payload, timeout=timeout)
         data = response.json()
         
         if response.status_code == 200:
@@ -122,6 +155,7 @@ def sync_order_status(order_id):
             order.remains = int(data.get('remains', order.remains))
             order.supplier_response = data
             order.save()
+            logger.info(f"Order {order.order_id} status synced: {order.status}")
             
     except Exception as e:
         logger.error(f"Error syncing order {order_id}: {str(e)}")

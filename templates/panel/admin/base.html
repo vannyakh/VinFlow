@@ -1,16 +1,662 @@
-{% extends 'base.html' %}
 {% load i18n %}
-
-{% block content %}
-<div class="flex">
-    <!-- Sidebar -->
-    {% include 'panel/admin/sidebar.html' %}
+{% load compress %}
+{% load static %}
+{% get_current_language as CURRENT_LANGUAGE %}
+<!DOCTYPE html>
+<html lang="{{ CURRENT_LANGUAGE }}" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="{% trans 'VinFlow SMM Panel - Admin Dashboard' %}">
+    <meta name="theme-color" content="#7c3aed">
+    <link rel="manifest" href="{% static 'manifest.json' %}">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>{% block title %}{% trans "Admin Dashboard" %} - VinFlow{% endblock %}</title>
     
-    <!-- Main Content -->
-    <main class="flex-1 ml-64 p-6">
-        {% block admin_content %}
-        {% endblock %}
-    </main>
-</div>
-{% endblock %}
-
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    
+    <!-- Alpine.js for dropdown menus -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
+    <!-- Chart.js for statistics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Khmer OS Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Khmer:wght@400;500;600;700&display=swap" rel="stylesheet">
+    {% compress css %}
+    <link rel="stylesheet" href="{% static 'src/output.css' %}">
+    {% endcompress %}
+    
+    <style>
+        * {
+            font-family: 'Noto Sans Khmer', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+        
+        :root {
+            --primary-purple: #7c3aed;
+            --primary-cyan: #06b6d4;
+            --primary-gold: #fbbf24;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            min-height: 100vh;
+        }
+        
+        .gradient-purple {
+            background: linear-gradient(135deg, var(--primary-purple) 0%, #a855f7 100%);
+        }
+        
+        .gradient-cyan {
+            background: linear-gradient(135deg, var(--primary-cyan) 0%, #22d3ee 100%);
+        }
+        
+        .gradient-gold {
+            background: linear-gradient(135deg, var(--primary-gold) 0%, #fcd34d 100%);
+        }
+        
+        .card-glass {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+        }
+        
+        .btn-primary {
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            transition: all 0.2s ease-in-out;
+            background: linear-gradient(135deg, var(--primary-purple) 0%, #a855f7 100%);
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(124, 58, 237, 0.4);
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            text-align: center;
+            vertical-align: middle;
+            display: inline-block;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(124, 58, 237, 0.4);
+        }
+        
+        .btn-secondary {
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            transition: all 0.2s ease-in-out;
+            background: rgba(100, 116, 139, 0.3);
+            color: #fff;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            cursor: pointer;
+        }
+        
+        .btn-secondary:hover {
+            background: rgba(100, 116, 139, 0.5);
+        }
+        
+        .htmx-indicator {
+            opacity: 0;
+            transition: opacity 200ms ease-in;
+        }
+        
+        .htmx-request .htmx-indicator {
+            opacity: 1;
+        }
+        
+        .htmx-request.htmx-indicator {
+            opacity: 1;
+        }
+        
+        /* Loading spinner */
+        .spinner {
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top: 3px solid var(--primary-purple);
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Sidebar Styles */
+        #adminSidebar {
+            width: 16rem; /* 256px */
+            top: 0;
+        }
+        
+        /* Sidebar Collapse Styles */
+        #adminSidebar.collapsed {
+            width: 4rem; /* 64px */
+        }
+        
+        #adminSidebar.collapsed #logoText {
+            opacity: 0;
+            width: 0;
+            overflow: hidden;
+        }
+        
+        #adminSidebar.collapsed .nav-text {
+            opacity: 0;
+            width: 0;
+            overflow: hidden;
+            display: none;
+            margin: 0;
+            padding: 0;
+        }
+        
+        #adminSidebar.collapsed .nav-item {
+            justify-content: center;
+            padding: 0.75rem;
+            position: relative;
+        }
+        
+        #adminSidebar.collapsed .nav-item svg {
+            width: 1.5rem; /* 24px - larger icons when collapsed */
+            height: 1.5rem;
+            margin: 0;
+        }
+        
+        /* Tooltip for collapsed sidebar items */
+        
+        #adminSidebar.collapsed .nav-item::before {
+            content: attr(data-tooltip);
+            position: absolute;
+            left: calc(100% + 0.75rem);
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(15, 23, 42, 0.98);
+            backdrop-filter: blur(10px);
+            color: #f1f5f9;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
+            z-index: 50;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+            transform: translateY(-50%) translateX(-4px);
+        }
+        
+        #adminSidebar.collapsed .nav-item::after {
+            content: '';
+            position: absolute;
+            left: 100%;
+            top: 50%;
+            transform: translateY(-50%);
+            border: 6px solid transparent;
+            border-right-color: rgba(15, 23, 42, 0.98);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
+            z-index: 51;
+            transform: translateY(-50%) translateX(-4px);
+        }
+        
+        #adminSidebar.collapsed .nav-item:hover::before,
+        #adminSidebar.collapsed .nav-item:hover::after {
+            opacity: 1;
+            transform: translateY(-50%) translateX(0);
+        }
+        
+        #adminSidebar.collapsed h3 {
+            opacity: 0;
+            height: 0;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        
+        #adminSidebar.collapsed nav {
+            padding: 1rem 0.5rem;
+        }
+        
+        #adminSidebar.collapsed nav > div {
+            margin-bottom: 1.5rem;
+        }
+        
+        #adminSidebar.collapsed nav > div:last-child {
+            margin-bottom: 0;
+        }
+        
+        #adminSidebar.collapsed .nav-item .ml-auto {
+            display: none; /* Hide badge counts when collapsed */
+        }
+        
+        /* File input styling */
+        input[type="file"]::file-selector-button {
+            margin-right: 1rem;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            border: 0;
+            font-size: 0.875rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, var(--primary-purple) 0%, #a855f7 100%);
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+        }
+        
+        input[type="file"]::file-selector-button:hover {
+            background: linear-gradient(135deg, #6d28d9 0%, #9333ea 100%);
+        }
+        
+        input[type="file"] {
+            color: #cbd5e1;
+        }
+        
+        /* Toggle Switch Styles */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 3rem; /* 48px */
+            height: 1.5rem; /* 24px */
+        }
+        
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #475569;
+            transition: 0.3s;
+            border-radius: 1.5rem;
+        }
+        
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 1.125rem; /* 18px */
+            width: 1.125rem; /* 18px */
+            left: 0.1875rem; /* 3px */
+            bottom: 0.1875rem; /* 3px */
+            background-color: white;
+            transition: 0.3s;
+            border-radius: 50%;
+        }
+        
+        .toggle-switch input:checked + .toggle-slider {
+            background: linear-gradient(135deg, var(--primary-purple) 0%, #a855f7 100%);
+        }
+        
+        .toggle-switch input:checked + .toggle-slider:before {
+            transform: translateX(1.5rem); /* 24px */
+        }
+        
+        .toggle-switch input:focus + .toggle-slider {
+            box-shadow: 0 0 1px rgba(124, 58, 237, 0.5);
+        }
+        
+        /* Header Styles */
+        #adminHeader {
+            margin-left: 0;
+            transition: margin-left 0.3s ease-in-out;
+        }
+        
+        /* Content Wrapper Styles */
+        #mainContent {
+            margin-left: 0;
+            margin-top: 4rem; /* 64px for header */
+            transition: margin-left 0.3s ease-in-out;
+        }
+        
+        /* Footer Styles */
+        #adminFooter {
+            margin-left: 0;
+            margin-top: 0;
+            transition: margin-left 0.3s ease-in-out;
+        }
+        
+        /* Mobile Sidebar */
+        @media (max-width: 1023px) {
+            #adminSidebar {
+                transform: translateX(-100%);
+                top: 0;
+            }
+            
+            #adminSidebar.open {
+                transform: translateX(0);
+            }
+            
+            #adminHeader {
+                margin-left: 0;
+            }
+            
+            #mainContent {
+                margin-left: 0;
+            }
+            
+            #adminFooter {
+                margin-left: 0;
+            }
+        }
+        
+        /* Desktop Sidebar */
+        @media (min-width: 1024px) {
+            #adminSidebar {
+                transform: translateX(0);
+                top: 0;
+            }
+            
+            #adminHeader {
+                margin-left: 16rem; /* 256px - sidebar width when expanded */
+            }
+            
+            #adminSidebar.collapsed ~ * #adminHeader,
+            #adminHeader.sidebar-collapsed {
+                margin-left: 4rem; /* 64px - sidebar width when collapsed */
+            }
+            
+            #mainContent {
+                margin-left: 16rem; /* 256px - sidebar width when expanded */
+            }
+            
+            #adminSidebar.collapsed ~ * #mainContent,
+            #mainContent.sidebar-collapsed {
+                margin-left: 4rem; /* 64px - sidebar width when collapsed */
+            }
+            
+            #adminFooter {
+                margin-left: 16rem; /* 256px - sidebar width when expanded */
+            }
+            
+            #adminSidebar.collapsed ~ * #adminFooter,
+            #adminFooter.sidebar-collapsed {
+                margin-left: 4rem; /* 64px - sidebar width when collapsed */
+            }
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="text-gray-100">
+    <!-- Top Navigation Bar -->
+    {% include 'panel/admin/header.html' %}
+    
+    <!-- Messages data for SweetAlert2 -->
+    {% if messages %}
+    <script id="messages-data" type="application/json">
+        [
+            {% for message in messages %}
+            {
+                "text": "{{ message|escapejs }}",
+                "type": "{{ message.tags|default:'info' }}"
+            }{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ]
+    </script>
+    {% endif %}
+    
+    <!-- Main Layout with Sidebar -->
+    <div class="flex relative">
+        <!-- Admin Sidebar -->
+        {% include 'panel/admin/sidebar.html' %}
+        
+        <!-- Main Content -->
+        <main id="mainContent" class="flex-1 p-4 md:p-6 min-h-[calc(100vh-4rem)] w-full transition-all duration-300">
+            {% block admin_content %}
+            {% endblock %}
+        </main>
+    </div>
+    
+    <!-- Footer -->
+    <footer id="adminFooter" class="border-t border-slate-700 py-6 bg-slate-900/50 backdrop-blur-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-gray-400">
+            <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+                <div>
+                    <p class="text-sm">&copy; 2026 VinFlow SMM Panel. {% trans "All rights reserved." %}</p>
+                </div>
+                <div class="flex items-center gap-4 text-sm">
+                    <a href="{% url 'dashboard' %}" class="hover:text-purple-400 transition">{% trans "Dashboard" %}</a>
+                    <span class="text-gray-600">|</span>
+                    <a href="{% url 'tickets' %}" class="hover:text-purple-400 transition">{% trans "Support" %}</a>
+                    <span class="text-gray-600">|</span>
+                    <a href="{% url 'profile' %}" class="hover:text-purple-400 transition">{% trans "Profile" %}</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+    
+    <script>
+        // Sidebar Toggle Functions
+        function toggleSidebar() {
+            const sidebar = document.getElementById('adminSidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            
+            if (window.innerWidth < 1024) {
+                // Mobile: toggle drawer
+                sidebar.classList.toggle('open');
+                overlay.classList.toggle('hidden');
+                document.body.style.overflow = sidebar.classList.contains('open') ? 'hidden' : '';
+            }
+        }
+        
+        function toggleSidebarCollapse() {
+            const sidebar = document.getElementById('adminSidebar');
+            const mainContent = document.getElementById('mainContent');
+            const header = document.getElementById('adminHeader');
+            const footer = document.getElementById('adminFooter');
+            const collapseIcon = document.getElementById('collapseIcon');
+            
+            sidebar.classList.toggle('collapsed');
+            
+            if (window.innerWidth >= 1024) {
+                if (sidebar.classList.contains('collapsed')) {
+                    // Collapsed: 64px (4rem)
+                    header.style.marginLeft = '4rem';
+                    mainContent.style.marginLeft = '4rem';
+                    footer.style.marginLeft = '4rem';
+                    collapseIcon.style.transform = 'rotate(180deg)';
+                } else {
+                    // Expanded: 256px (16rem)
+                    header.style.marginLeft = '16rem';
+                    mainContent.style.marginLeft = '16rem';
+                    footer.style.marginLeft = '16rem';
+                    collapseIcon.style.transform = 'rotate(0deg)';
+                }
+            }
+            
+            // Save state to localStorage
+            localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+        }
+        
+        // Restore sidebar state on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const sidebar = document.getElementById('adminSidebar');
+            const mainContent = document.getElementById('mainContent');
+            const header = document.getElementById('adminHeader');
+            const footer = document.getElementById('adminFooter');
+            const collapseIcon = document.getElementById('collapseIcon');
+            const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+            
+            if (window.innerWidth >= 1024) {
+                if (isCollapsed) {
+                    sidebar.classList.add('collapsed');
+                    header.style.marginLeft = '4rem';
+                    mainContent.style.marginLeft = '4rem';
+                    footer.style.marginLeft = '4rem';
+                    if (collapseIcon) {
+                        collapseIcon.style.transform = 'rotate(180deg)';
+                    }
+                } else {
+                    header.style.marginLeft = '16rem';
+                    mainContent.style.marginLeft = '16rem';
+                    footer.style.marginLeft = '16rem';
+                }
+            } else {
+                // Mobile: no margin
+                header.style.marginLeft = '0';
+                mainContent.style.marginLeft = '0';
+                footer.style.marginLeft = '0';
+            }
+        });
+        
+        // Close mobile sidebar when clicking outside
+        document.addEventListener('click', function(event) {
+            const sidebar = document.getElementById('adminSidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            const toggleBtn = document.getElementById('sidebarToggle');
+            
+            if (window.innerWidth < 1024 && 
+                sidebar.classList.contains('open') && 
+                !sidebar.contains(event.target) && 
+                !toggleBtn.contains(event.target)) {
+                toggleSidebar();
+            }
+        });
+        
+        // Close mobile sidebar on escape key
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                const sidebar = document.getElementById('adminSidebar');
+                if (window.innerWidth < 1024 && sidebar.classList.contains('open')) {
+                    toggleSidebar();
+                }
+            }
+        });
+        
+        // Handle window resize
+        window.addEventListener('resize', function() {
+            const sidebar = document.getElementById('adminSidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            const mainContent = document.getElementById('mainContent');
+            const header = document.getElementById('adminHeader');
+            const footer = document.getElementById('adminFooter');
+            const isCollapsed = sidebar.classList.contains('collapsed');
+            
+            if (window.innerWidth >= 1024) {
+                // Desktop
+                sidebar.classList.remove('open');
+                overlay.classList.add('hidden');
+                document.body.style.overflow = '';
+                
+                // Set margins based on collapse state
+                if (isCollapsed) {
+                    header.style.marginLeft = '4rem';
+                    mainContent.style.marginLeft = '4rem';
+                    footer.style.marginLeft = '4rem';
+                } else {
+                    header.style.marginLeft = '16rem';
+                    mainContent.style.marginLeft = '16rem';
+                    footer.style.marginLeft = '16rem';
+                }
+            } else {
+                // Mobile
+                header.style.marginLeft = '0';
+                mainContent.style.marginLeft = '0';
+                footer.style.marginLeft = '0';
+            }
+        });
+        
+        // HTMX configuration
+        document.body.addEventListener('htmx:configRequest', function(evt) {
+            evt.detail.headers['X-CSRFToken'] = '{{ csrf_token }}';
+        });
+        
+        // SweetAlert2 configuration for dark theme
+        const swalTheme = {
+            colorScheme: 'dark',
+            background: '#1e293b',
+            color: '#f1f5f9',
+            confirmButtonColor: '#7c3aed',
+            cancelButtonColor: '#64748b',
+            denyButtonColor: '#ef4444',
+        };
+        
+        // Display Django messages using SweetAlert2
+        document.addEventListener('DOMContentLoaded', function() {
+            const messagesData = document.getElementById('messages-data');
+            if (messagesData) {
+                try {
+                    const messages = JSON.parse(messagesData.textContent);
+                    let delay = 0;
+                    
+                    messages.forEach(function(message) {
+                        setTimeout(function() {
+                            let icon = 'info';
+                            let title = '{% trans "Information" %}';
+                            
+                            // Map Django message tags to SweetAlert2 types
+                            switch(message.type) {
+                                case 'error':
+                                case 'danger':
+                                    icon = 'error';
+                                    title = '{% trans "Error" %}';
+                                    break;
+                                case 'success':
+                                    icon = 'success';
+                                    title = '{% trans "Success" %}';
+                                    break;
+                                case 'warning':
+                                    icon = 'warning';
+                                    title = '{% trans "Warning" %}';
+                                    break;
+                                case 'info':
+                                default:
+                                    icon = 'info';
+                                    title = '{% trans "Information" %}';
+                                    break;
+                            }
+                            
+                            Swal.fire({
+                                ...swalTheme,
+                                icon: icon,
+                                title: title,
+                                text: message.text,
+                                toast: true,
+                                position: 'top-end',
+                                showConfirmButton: false,
+                                timer: 5000,
+                                timerProgressBar: true,
+                                didOpen: (toast) => {
+                                    toast.addEventListener('mouseenter', Swal.stopTimer);
+                                    toast.addEventListener('mouseleave', Swal.resumeTimer);
+                                }
+                            });
+                        }, delay);
+                        
+                        // Stagger multiple messages
+                        delay += 300;
+                    });
+                    
+                    // Remove the messages data element after processing
+                    messagesData.remove();
+                } catch (e) {
+                    console.error('Error parsing messages:', e);
+                }
+            }
+        });
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

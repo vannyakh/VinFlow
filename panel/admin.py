@@ -2,7 +2,7 @@ from django.contrib import admin
 from .models import (
     UserProfile, ServiceCategory, Service, Order, SubscriptionPackage,
     UserSubscription, Coupon, Payment, Ticket, TicketMessage,
-    AffiliateCommission, BlogPost
+    AffiliateCommission, BlogPost, SystemSetting
 )
 
 @admin.register(UserProfile)
@@ -74,3 +74,30 @@ class BlogPostAdmin(admin.ModelAdmin):
     list_filter = ['is_published', 'created_at']
     search_fields = ['title', 'slug']
     prepopulated_fields = {'slug': ('title',)}
+
+@admin.register(SystemSetting)
+class SystemSettingAdmin(admin.ModelAdmin):
+    list_display = ['key', 'label', 'group', 'setting_type', 'get_value', 'is_public', 'updated_at']
+    list_filter = ['group', 'setting_type', 'is_public', 'is_encrypted']
+    search_fields = ['key', 'label', 'description']
+    list_editable = ['is_public']
+    readonly_fields = ['updated_at', 'updated_by']
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('key', 'label', 'description', 'group', 'setting_type', 'order')
+        }),
+        ('Value', {
+            'fields': ('value', 'default_value')
+        }),
+        ('Options', {
+            'fields': ('is_public', 'is_encrypted')
+        }),
+        ('Metadata', {
+            'fields': ('updated_at', 'updated_by'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def get_value(self, obj):
+        return obj.get_value()[:50] + '...' if len(obj.get_value()) > 50 else obj.get_value()
+    get_value.short_description = 'Value'

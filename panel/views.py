@@ -1,4 +1,8 @@
 from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
+import os
+import json
+from django.conf import settings as django_settings
 from django.contrib.auth import login, authenticate
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -26,7 +30,8 @@ import stripe
 from .models import (
     UserProfile, Service, ServiceCategory, Order, SubscriptionPackage,
     UserSubscription, Coupon, Payment, Ticket, TicketMessage,
-    AffiliateCommission, BlogPost, BlacklistIP, BlacklistLink, BlacklistEmail
+    AffiliateCommission, BlogPost, BlacklistIP, BlacklistLink, BlacklistEmail,
+    SystemSetting
 )
 
 # Create UserProfile on user creation
@@ -1209,6 +1214,207 @@ def admin_categories(request):
         'pending_tickets_count': Ticket.objects.filter(status__in=['open', 'in_progress']).count(),
     }
     return render(request, 'panel/admin/categories.html', context)
+
+# Admin Settings Management
+@login_required
+@admin_required
+def admin_settings(request):
+    group_filter = request.GET.get('group', '')
+    settings = SystemSetting.objects.all()
+    
+    if group_filter:
+        settings = settings.filter(group=group_filter)
+    
+    settings = settings.order_by('group', 'order', 'key')
+    
+    # Group settings by category
+    grouped_settings = {}
+    for setting in settings:
+        if setting.group not in grouped_settings:
+            grouped_settings[setting.group] = []
+        grouped_settings[setting.group].append(setting)
+    
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        
+        if action == 'update':
+            # Update multiple settings
+            updated_count = 0
+            for setting in settings:
+                field_name = f'setting_{setting.id}'
+                
+                # Handle file uploads for images
+                if setting.setting_type == 'image':
+                    file_field_name = f'image_{setting.id}'
+                    if file_field_name in request.FILES:
+                        uploaded_file = request.FILES[file_field_name]
+                        # Save file to media/settings/ directory
+                        upload_path = os.path.join('settings', uploaded_file.name)
+                        full_path = os.path.join(django_settings.MEDIA_ROOT, upload_path)
+                        os.makedirs(os.path.dirname(full_path), exist_ok=True)
+                        
+                        with open(full_path, 'wb+') as destination:
+                            for chunk in uploaded_file.chunks():
+                                destination.write(chunk)
+                        
+                        # Store relative path in setting value
+                        setting.value = upload_path
+                        setting.updated_by = request.user
+                        setting.save()
+                        updated_count += 1
+                    elif field_name in request.POST:
+                        # Allow text input for image URL/path
+                        new_value = request.POST.get(field_name, '')
+                        if new_value != setting.value:
+                            setting.value = new_value
+                            setting.updated_by = request.user
+                            setting.save()
+                            updated_count += 1
+                
+                elif setting.setting_type == 'image_list':
+                    # Handle multiple image uploads
+                    file_field_name = f'images_{setting.id}'
+                    if file_field_name in request.FILES:
+                        uploaded_files = request.FILES.getlist(file_field_name)
+                        image_paths = []
+                        
+                        for uploaded_file in uploaded_files:
+                            upload_path = os.path.join('settings', uploaded_file.name)
+                            full_path = os.path.join(django_settings.MEDIA_ROOT, upload_path)
+                            os.makedirs(os.path.dirname(full_path), exist_ok=True)
+                            
+                            with open(full_path, 'wb+') as destination:
+                                for chunk in uploaded_file.chunks():
+                                    destination.write(chunk)
+                            
+                            image_paths.append(upload_path)
+                        
+                        # Store as JSON array
+                        if image_paths:
+                            # Merge with existing images if any
+                            existing_images = []
+                            if setting.value:
+                                try:
+                                    existing_images = json.loads(setting.value)
+                                except:
+                                    pass
+                            existing_images.extend(image_paths)
+                            setting.value = json.dumps(existing_images)
+                            setting.updated_by = request.user
+                            setting.save()
+                            updated_count += 1
+                    
+                    # Handle removal of images
+                    remove_field_name = f'remove_images_{setting.id}'
+                    if remove_field_name in request.POST:
+                        remove_indices = request.POST.getlist(remove_field_name)
+                        if setting.value:
+                            try:
+                                image_list = json.loads(setting.value)
+                                # Remove images by index (in reverse to maintain indices)
+                                for idx in sorted([int(i) for i in remove_indices], reverse=True):
+                                    if 0 <= idx < len(image_list):
+                                        # Optionally delete the file
+                                        old_path = os.path.join(django_settings.MEDIA_ROOT, image_list[idx])
+                                        if os.path.exists(old_path):
+                                            os.remove(old_path)
+                                        image_list.pop(idx)
+                                setting.value = json.dumps(image_list) if image_list else ''
+                                setting.updated_by = request.user
+                                setting.save()
+                                updated_count += 1
+                            except:
+                                pass
+                
+                elif field_name in request.POST:
+                    new_value = request.POST.get(field_name, '')
+                    
+                    # Handle boolean values
+                    if setting.setting_type == 'boolean':
+                        new_value = 'true' if new_value == 'on' or new_value == 'true' else 'false'
+                    
+                    if new_value != setting.value:
+                        setting.value = new_value
+                        setting.updated_by = request.user
+                        setting.save()
+                        updated_count += 1
+            
+            if updated_count > 0:
+                messages.success(request, f'{updated_count} setting(s) updated successfully')
+            else:
+                messages.info(request, 'No changes detected')
+            
+            url = reverse('admin_settings')
+            if group_filter:
+                url += f'?group={group_filter}'
+            return redirect(url)
+        
+        elif action == 'create':
+            key = request.POST.get('key', '').strip()
+            label = request.POST.get('label', '').strip()
+            setting_type = request.POST.get('setting_type', 'text')
+            group = request.POST.get('group', 'general')
+            default_value = request.POST.get('default_value', '')
+            description = request.POST.get('description', '')
+            order = int(request.POST.get('order', 0))
+            is_public = request.POST.get('is_public') == 'on'
+            is_encrypted = request.POST.get('is_encrypted') == 'on'
+            
+            if not key or not label:
+                messages.error(request, 'Key and label are required')
+            elif SystemSetting.objects.filter(key=key).exists():
+                messages.error(request, f'Setting with key "{key}" already exists')
+            else:
+                SystemSetting.objects.create(
+                    key=key,
+                    label=label,
+                    setting_type=setting_type,
+                    group=group,
+                    default_value=default_value,
+                    value=default_value,
+                    description=description,
+                    order=order,
+                    is_public=is_public,
+                    is_encrypted=is_encrypted,
+                    updated_by=request.user
+                )
+                messages.success(request, 'Setting created successfully')
+            
+            url = reverse('admin_settings')
+            if group_filter:
+                url += f'?group={group_filter}'
+            return redirect(url)
+        
+        elif action == 'delete':
+            setting_id = request.POST.get('setting_id')
+            try:
+                setting = SystemSetting.objects.get(id=setting_id)
+                setting.delete()
+                messages.success(request, 'Setting deleted successfully')
+            except SystemSetting.DoesNotExist:
+                messages.error(request, 'Setting not found')
+            
+            url = reverse('admin_settings')
+            if group_filter:
+                url += f'?group={group_filter}'
+            return redirect(url)
+    
+    # Parse image lists for template rendering
+    for group, settings_list in grouped_settings.items():
+        for setting in settings_list:
+            if setting.setting_type == 'image_list':
+                setting.image_list = setting.get_image_list()
+            else:
+                setting.image_list = []
+    
+    context = {
+        'grouped_settings': grouped_settings,
+        'group_filter': group_filter,
+        'setting_groups': SystemSetting.SETTING_GROUPS,
+        'setting_types': SystemSetting.SETTING_TYPES,
+        'pending_tickets_count': Ticket.objects.filter(status__in=['open', 'in_progress']).count(),
+    }
+    return render(request, 'panel/admin/settings.html', context)
 
 # Admin Tickets Management
 @login_required

@@ -36,6 +36,7 @@ urlpatterns = [
     path('admin/services/', views.admin_services, name='admin_services'),
     path('admin/transactions/', views.admin_transactions, name='admin_transactions'),
     path('admin/categories/', views.admin_categories, name='admin_categories'),
+    path('admin/settings/', views.admin_settings, name='admin_settings'),
     path('admin/tickets/', views.admin_tickets, name='admin_tickets'),
     path('admin/users/', views.admin_users, name='admin_users'),
     path('admin/users/<int:user_id>/edit-role/', views.admin_edit_user_role, name='admin_edit_user_role'),
