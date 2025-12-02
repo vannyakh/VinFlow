@@ -125,8 +125,8 @@ class APICreateOrderView(APIView):
             request.user.profile.save()
             
             # Place order to supplier
-            from .tasks import place_order_to_supplier
-            place_order_to_supplier.delay(order.id)
+            from .tasks import place_order_to_supplier, execute_task_async_or_sync
+            execute_task_async_or_sync(place_order_to_supplier, order.id)
             
             return Response({
                 'status': 'success',
@@ -156,7 +156,7 @@ class APIOrdersView(APIView):
     permission_classes = [IsAuthenticated]
     
     def get(self, request):
-        orders = Order.objects.filter(user=request.user).order_by('-created_at')
+        orders = Order.objects.select_related('service').filter(user=request.user).order_by('-created_at')
         status_filter = request.GET.get('status', '')
         if status_filter:
             orders = orders.filter(status=status_filter)
@@ -184,7 +184,7 @@ class APIOrderStatusView(APIView):
     
     def get(self, request, order_id):
         try:
-            order = Order.objects.get(id=order_id, user=request.user)
+            order = Order.objects.select_related('service').get(id=order_id, user=request.user)
             return Response({
                 'status': 'success',
                 'order': {

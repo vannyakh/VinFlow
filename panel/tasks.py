@@ -7,6 +7,46 @@ from .settings_utils import get_setting
 
 logger = logging.getLogger(__name__)
 
+def execute_task_async_or_sync(task_func, *args, **kwargs):
+    """
+    Execute a Celery task asynchronously if Celery/Redis is available,
+    otherwise execute it synchronously as a fallback.
+    
+    Args:
+        task_func: The Celery task function
+        *args: Positional arguments for the task
+        **kwargs: Keyword arguments for the task
+    
+    Returns:
+        The task result (AsyncResult if async, direct result if sync)
+    """
+    try:
+        # Try to execute asynchronously
+        return task_func.delay(*args, **kwargs)
+    except (ConnectionError, OSError, IOError) as e:
+        # If Celery/Redis is not available (connection refused, etc.), run synchronously
+        error_code = getattr(e, 'errno', None)
+        if error_code == 61 or 'Connection refused' in str(e) or 'Connection refused' in str(e.args):
+            logger.warning(
+                f"Celery broker unavailable (Connection refused). "
+                f"Running task {task_func.__name__} synchronously."
+            )
+        else:
+            logger.warning(
+                f"Celery broker unavailable ({str(e)}). "
+                f"Running task {task_func.__name__} synchronously."
+            )
+        # Execute the task function directly (not as a Celery task)
+        return task_func(*args, **kwargs)
+    except Exception as e:
+        # Catch any other Celery-related errors and fall back to synchronous execution
+        logger.warning(
+            f"Celery task execution failed ({str(e)}). "
+            f"Running task {task_func.__name__} synchronously."
+        )
+        # Execute the task function directly (not as a Celery task)
+        return task_func(*args, **kwargs)
+
 @shared_task
 def place_order_to_supplier(order_id):
     from .models import Order
@@ -184,7 +224,7 @@ def process_subscription_delivery():
             charge=0.00,  # Already paid via subscription
         )
         
-        place_order_to_supplier.delay(order.id)
+        execute_task_async_or_sync(place_order_to_supplier, order.id)
         
         # Update next delivery
         subscription.last_delivery = now

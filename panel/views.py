@@ -285,7 +285,7 @@ def dashboard(request):
     total_spent = Order.objects.filter(user=user).aggregate(Sum('charge'))['charge__sum'] or 0
     
     # Recent orders
-    recent_orders = Order.objects.filter(user=user).order_by('-created_at')[:5]
+    recent_orders = Order.objects.select_related('service').filter(user=user).order_by('-created_at')[:5]
     
     # Active subscriptions
     active_subscriptions = UserSubscription.objects.filter(user=user, is_active=True).count()
@@ -384,8 +384,8 @@ def create_order(request):
         profile.save()
         
         # Place order to supplier (async)
-        from .tasks import place_order_to_supplier
-        place_order_to_supplier.delay(order.id)
+        from .tasks import place_order_to_supplier, execute_task_async_or_sync
+        execute_task_async_or_sync(place_order_to_supplier, order.id)
         
         messages.success(request, f'Order #{order.order_id} created successfully!')
         return redirect('orders')
@@ -397,7 +397,7 @@ def create_order(request):
 # Orders List
 @login_required
 def orders(request):
-    orders_list = Order.objects.filter(user=request.user).order_by('-created_at')
+    orders_list = Order.objects.select_related('service').filter(user=request.user).order_by('-created_at')
     
     # Filtering
     status_filter = request.GET.get('status', '')
@@ -413,13 +413,21 @@ def orders(request):
 # Order Detail (HTMX)
 @login_required
 def order_detail(request, order_id):
-    order = get_object_or_404(Order, id=order_id, user=request.user)
+    order = get_object_or_404(
+        Order.objects.select_related('service'),
+        id=order_id,
+        user=request.user
+    )
     return render(request, 'panel/partials/order_detail.html', {'order': order})
 
 # Real-time Order Status (HTMX polling)
 @login_required
 def order_status(request, order_id):
-    order = get_object_or_404(Order, id=order_id, user=request.user)
+    order = get_object_or_404(
+        Order.objects.select_related('service'),
+        id=order_id,
+        user=request.user
+    )
     return render(request, 'panel/partials/order_status.html', {'order': order})
 
 # Mass Order Upload
@@ -468,8 +476,8 @@ def mass_order_upload(request):
                 request.user.profile.balance -= charge
                 request.user.profile.total_spent += charge
                 
-                from .tasks import place_order_to_supplier
-                place_order_to_supplier.delay(order.id)
+                from .tasks import place_order_to_supplier, execute_task_async_or_sync
+                execute_task_async_or_sync(place_order_to_supplier, order.id)
                 
                 created_count += 1
                 
@@ -576,8 +584,8 @@ def free_trial(request):
             charge=0.00,
         )
         
-        from .tasks import place_order_to_supplier
-        place_order_to_supplier.delay(order.id)
+        from .tasks import place_order_to_supplier, execute_task_async_or_sync
+        execute_task_async_or_sync(place_order_to_supplier, order.id)
         
         messages.success(request, 'Free 100 likes trial activated!')
         return redirect('orders')
@@ -1052,7 +1060,7 @@ def admin_orders(request):
     status_filter = request.GET.get('status', '')
     search = request.GET.get('search', '')
     
-    orders = Order.objects.all()
+    orders = Order.objects.select_related('service', 'user').all()
     
     if status_filter:
         orders = orders.filter(status=status_filter)
@@ -1079,7 +1087,7 @@ def admin_orders(request):
 @login_required
 @admin_required
 def admin_dripfeed(request):
-    dripfeed_orders = Order.objects.filter(drip_feed=True).order_by('-created_at')
+    dripfeed_orders = Order.objects.select_related('service', 'user').filter(drip_feed=True).order_by('-created_at')
     
     context = {
         'dripfeed_orders': dripfeed_orders,
@@ -1117,7 +1125,7 @@ def admin_cancel(request):
         except Order.DoesNotExist:
             messages.error(request, 'Order not found')
     
-    canceled_orders = Order.objects.filter(status='Canceled').order_by('-updated_at')
+    canceled_orders = Order.objects.select_related('service', 'user').filter(status='Canceled').order_by('-updated_at')
     
     context = {
         'canceled_orders': canceled_orders,
