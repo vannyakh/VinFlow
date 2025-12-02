@@ -1158,11 +1158,14 @@ def admin_services(request):
 @login_required
 @admin_required
 def admin_transactions(request):
-    transactions = Payment.objects.all().order_by('-created_at')[:200]
+    transactions = Payment.objects.all().order_by('-created_at')
     
     status_filter = request.GET.get('status', '')
     if status_filter:
         transactions = transactions.filter(status=status_filter)
+    
+    # Apply slice after filtering
+    transactions = transactions[:200]
     
     context = {
         'transactions': transactions,
