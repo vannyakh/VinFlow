@@ -2612,28 +2612,66 @@ def admin_create_notification(request):
 # Add Funds
 @login_required
 def add_funds(request):
+    # Get enabled payment methods from system settings
+    from .settings_utils import get_setting, get_setting_float
+    
+    enabled_methods = []
+    for method_code, method_name in Payment.PAYMENT_METHODS:
+        is_enabled = get_setting(f'payment_{method_code}_enabled', 'true')
+        if is_enabled.lower() in ('true', '1', 'yes', 'on'):
+            enabled_methods.append((method_code, method_name))
+    
+    # If no payment methods are enabled, enable all by default
+    if not enabled_methods:
+        enabled_methods = Payment.PAYMENT_METHODS
+    
+    # Get min/max deposit settings
+    min_deposit = get_setting_float('min_deposit', 1.0)
+    max_deposit = get_setting_float('max_deposit', 10000.0)
+    
     if request.method == 'POST':
         amount = request.POST.get('amount', '').strip()
         method = request.POST.get('method', '').strip()
+        regenerate = request.POST.get('regenerate', '').strip() == 'true'
+        payment_id = request.POST.get('payment_id', '').strip()
         
         errors = []
+        
+        # Handle QR regeneration for KHQR payments
+        if regenerate and payment_id and method == 'khqr':
+            try:
+                payment = Payment.objects.get(id=payment_id, user=request.user, method='khqr', status='pending')
+                # Regenerate QR code for existing payment
+                from .payment_gateways import create_khqr_payment
+                khqr_data, error = create_khqr_payment(payment)
+                if khqr_data:
+                    return render(request, 'panel/khqr_payment.html', {
+                        'payment': payment,
+                        'khqr_data': khqr_data,
+                    })
+                else:
+                    messages.error(request, f'Failed to regenerate QR code: {error}')
+                    return redirect('add_funds')
+            except Payment.DoesNotExist:
+                messages.error(request, 'Payment not found or cannot be regenerated')
+                return redirect('add_funds')
         
         # Validate amount
         try:
             amount = float(amount)
             if amount <= 0:
                 errors.append('Amount must be greater than 0')
-            elif amount < 1:
-                errors.append('Minimum amount is $1.00')
-            elif amount > 10000:
-                errors.append('Maximum amount is $10,000.00')
+            elif amount < min_deposit:
+                errors.append(f'Minimum amount is ${min_deposit:.2f}')
+            elif amount > max_deposit:
+                errors.append(f'Maximum amount is ${max_deposit:,.2f}')
         except (ValueError, TypeError):
             errors.append('Invalid amount')
         
-        # Validate payment method
-        valid_methods = [choice[0] for choice in Payment.PAYMENT_METHODS]
+        # Validate payment method - check if it's enabled
+        valid_methods = [choice[0] for choice in enabled_methods]
         if method not in valid_methods:
-            errors.append('Invalid payment method')
+            errors.append('Invalid or disabled payment method')
         
         if not errors:
             # Generate unique transaction ID
@@ -2650,7 +2688,11 @@ def add_funds(request):
             )
             
             # Process payment based on method
-            from .payment_gateways import create_paypal_payment, create_stripe_payment_intent
+            from .payment_gateways import (
+                create_paypal_payment, 
+                create_stripe_payment_intent,
+                create_khqr_payment
+            )
             from django.conf import settings
             
             if method == 'paypal':
@@ -2676,6 +2718,19 @@ def add_funds(request):
                     messages.error(request, f'Stripe payment creation failed: {error}')
                     payment.status = 'failed'
                     payment.save()
+                    
+            elif method == 'khqr':
+                khqr_data, error = create_khqr_payment(payment)
+                if khqr_data:
+                    # Render KHQR payment page with QR code
+                    return render(request, 'panel/khqr_payment.html', {
+                        'payment': payment,
+                        'khqr_data': khqr_data,
+                    })
+                else:
+                    messages.error(request, f'KHQR payment creation failed: {error}')
+                    payment.status = 'failed'
+                    payment.save()
             else:
                 # Other payment methods (manual processing)
                 messages.success(request, f'Payment request created. Transaction ID: {transaction_id}. Please complete the payment.')
@@ -2686,9 +2741,10 @@ def add_funds(request):
             messages.error(request, error)
     
     # GET request - show form
-    payment_methods = Payment.PAYMENT_METHODS
     context = {
-        'payment_methods': payment_methods,
+        'payment_methods': enabled_methods,
+        'min_deposit': min_deposit,
+        'max_deposit': max_deposit,
     }
     return render(request, 'panel/add_funds.html', context)
 
@@ -2827,3 +2883,75 @@ def stripe_webhook(request):
         return JsonResponse({'status': 'success'})
     else:
         return JsonResponse({'status': 'error', 'message': error}, status=400)
+
+# Check Payment Status (for KHQR and other async payments)
+@login_required
+def check_payment_status(request, payment_id):
+    """
+    Check the status of a payment (primarily for KHQR)
+    """
+    try:
+        payment = Payment.objects.get(id=payment_id, user=request.user)
+        
+        # If already completed, return success
+        if payment.status == 'completed':
+            return JsonResponse({
+                'status': 'completed',
+                'message': 'Payment completed successfully'
+            })
+        
+        # For KHQR payments, check if QR code has expired
+        if payment.method == 'khqr':
+            from django.utils import timezone
+            from datetime import timedelta
+            
+            # Check if QR code has expired
+            gateway_response = payment.gateway_response or {}
+            expires_at_str = gateway_response.get('expires_at')
+            
+            if expires_at_str:
+                try:
+                    from datetime import datetime
+                    expires_at = datetime.fromisoformat(expires_at_str.replace('Z', '+00:00'))
+                    if timezone.now() > expires_at:
+                        # QR code has expired
+                        payment.status = 'expired'
+                        payment.save()
+                        return JsonResponse({
+                            'status': 'expired',
+                            'message': 'QR code has expired. Please generate a new one.'
+                        })
+                except (ValueError, TypeError):
+                    pass
+            
+            # Check status with gateway
+            from .payment_gateways import check_khqr_payment_status
+            success, updated_payment, error = check_khqr_payment_status(payment)
+            
+            if success and updated_payment:
+                return JsonResponse({
+                    'status': 'completed',
+                    'message': 'Payment completed successfully'
+                })
+            elif updated_payment:
+                return JsonResponse({
+                    'status': updated_payment.status,
+                    'message': error or 'Payment is pending'
+                })
+            else:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': error or 'Failed to check payment status'
+                }, status=400)
+        
+        # For other payment methods, just return current status
+        return JsonResponse({
+            'status': payment.status,
+            'message': f'Payment is {payment.status}'
+        })
+        
+    except Payment.DoesNotExist:
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Payment not found'
+        }, status=404)

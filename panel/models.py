@@ -170,13 +170,7 @@ class Payment(models.Model):
     PAYMENT_METHODS = [
         ('paypal', 'PayPal'),
         ('stripe', 'Stripe'),
-        ('aba', 'ABA PayWay'),
-        ('wing', 'Wing Bank'),
-        ('pipay', 'Pi Pay'),
-        ('khqr', 'KHQR'),
-        ('usdt', 'USDT'),
-        ('card', 'Credit Card'),
-        ('truemoney', 'TrueMoney'),
+        ('khqr', 'KHQR Bakong'),
     ]
     
     STATUS_CHOICES = [
@@ -184,6 +178,7 @@ class Payment(models.Model):
         ('completed', 'Completed'),
         ('failed', 'Failed'),
         ('canceled', 'Canceled'),
+        ('expired', 'Expired'),
     ]
     
     transaction_id = models.CharField(max_length=100, unique=True)

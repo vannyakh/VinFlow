@@ -25,6 +25,7 @@ urlpatterns = [
     path('payment/stripe/success/', views.stripe_success, name='stripe_success'),
     path('payment/stripe/cancel/', views.stripe_cancel, name='stripe_cancel'),
     path('payment/stripe/webhook/', views.stripe_webhook, name='stripe_webhook'),
+    path('payment/<int:payment_id>/status/', views.check_payment_status, name='check_payment_status'),
     
     # Admin Routes
     path('admin/', views.admin_dashboard, name='admin_dashboard'),
