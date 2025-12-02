@@ -1469,6 +1469,96 @@ def admin_users(request):
     }
     return render(request, 'panel/admin/users.html', context)
 
+# Admin Create User (AJAX endpoint)
+@login_required
+@admin_required
+def admin_create_user(request):
+    from django.contrib.auth.models import Group
+    
+    if request.method == 'POST':
+        try:
+            # Get form data
+            username = request.POST.get('username', '').strip()
+            email = request.POST.get('email', '').strip()
+            password = request.POST.get('password', '').strip()
+            password_confirm = request.POST.get('password_confirm', '').strip()
+            first_name = request.POST.get('first_name', '').strip()
+            last_name = request.POST.get('last_name', '').strip()
+            role = request.POST.get('role', 'user').strip()
+            balance = request.POST.get('balance', '').strip()
+            is_active = request.POST.get('is_active') == 'true'
+            selected_groups = request.POST.getlist('groups')
+            
+            # Validation
+            if not username or not email or not password:
+                return JsonResponse({'status': 'error', 'message': 'Username, email, and password are required'}, status=400)
+            
+            if len(username) < 3:
+                return JsonResponse({'status': 'error', 'message': 'Username must be at least 3 characters'}, status=400)
+            
+            if len(password) < 8:
+                return JsonResponse({'status': 'error', 'message': 'Password must be at least 8 characters'}, status=400)
+            
+            if password != password_confirm:
+                return JsonResponse({'status': 'error', 'message': 'Passwords do not match'}, status=400)
+            
+            # Check if username/email already exists
+            if User.objects.filter(username=username).exists():
+                return JsonResponse({'status': 'error', 'message': 'Username already exists'}, status=400)
+            
+            if User.objects.filter(email=email).exists():
+                return JsonResponse({'status': 'error', 'message': 'Email already exists'}, status=400)
+            
+            # Validate email format
+            try:
+                validate_email(email)
+            except ValidationError:
+                return JsonResponse({'status': 'error', 'message': 'Invalid email format'}, status=400)
+            
+            # Validate role
+            if role not in ['admin', 'reseller', 'user']:
+                role = 'user'
+            
+            # Create user
+            user = User.objects.create_user(
+                username=username,
+                email=email,
+                password=password,
+                first_name=first_name,
+                last_name=last_name,
+                is_active=is_active
+            )
+            
+            # Ensure profile is created and set role
+            profile = ensure_user_profile(user)
+            profile.role = role
+            
+            # Set initial balance if provided
+            try:
+                if balance:
+                    profile.balance = float(balance)
+            except (ValueError, TypeError):
+                pass
+            
+            profile.save()
+            
+            # Assign groups if provided
+            if selected_groups:
+                selected_group_ids = [int(gid) for gid in selected_groups if gid.isdigit()]
+                groups = Group.objects.filter(id__in=selected_group_ids)
+                user.groups.set(groups)
+            
+            return JsonResponse({
+                'status': 'success',
+                'message': f'User {user.username} created successfully',
+                'user_id': user.id
+            })
+            
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+    
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
+
 # Admin Edit User (AJAX endpoint)
 @login_required
 @admin_required
@@ -1608,7 +1698,8 @@ def admin_edit_user_role(request, user_id):
 @login_required
 @admin_required
 def admin_user_groups(request):
-    from django.contrib.auth.models import Group
+    from django.contrib.auth.models import Group, Permission
+    from django.contrib.contenttypes.models import ContentType
     
     groups = Group.objects.all().prefetch_related('permissions', 'user_set')
     search = request.GET.get('search', '')
@@ -1616,12 +1707,147 @@ def admin_user_groups(request):
     if search:
         groups = groups.filter(name__icontains=search)
     
+    # Get all permissions organized by content type for the modal
+    all_permissions = Permission.objects.select_related('content_type').order_by('content_type__app_label', 'content_type__model', 'codename')
+    permissions_by_app = {}
+    for perm in all_permissions:
+        app_label = perm.content_type.app_label
+        if app_label not in permissions_by_app:
+            permissions_by_app[app_label] = {}
+        model_name = perm.content_type.model
+        if model_name not in permissions_by_app[app_label]:
+            permissions_by_app[app_label][model_name] = []
+        permissions_by_app[app_label][model_name].append({
+            'id': perm.id,
+            'name': perm.name,
+            'codename': perm.codename,
+        })
+    
     context = {
         'groups': groups,
         'search': search,
+        'permissions_by_app': permissions_by_app,
         'pending_tickets_count': Ticket.objects.filter(status__in=['open', 'in_progress']).count(),
     }
     return render(request, 'panel/admin/user_groups.html', context)
+
+# Admin Create Group (AJAX endpoint)
+@login_required
+@admin_required
+def admin_create_group(request):
+    from django.contrib.auth.models import Group, Permission
+    
+    if request.method == 'POST':
+        try:
+            name = request.POST.get('name', '').strip()
+            selected_permissions = request.POST.getlist('permissions')
+            
+            if not name:
+                return JsonResponse({'status': 'error', 'message': 'Group name is required'}, status=400)
+            
+            # Check if group name already exists
+            if Group.objects.filter(name=name).exists():
+                return JsonResponse({'status': 'error', 'message': 'Group name already exists'}, status=400)
+            
+            # Create group
+            group = Group.objects.create(name=name)
+            
+            # Assign permissions if provided
+            if selected_permissions:
+                permission_ids = [int(pid) for pid in selected_permissions if pid.isdigit()]
+                permissions = Permission.objects.filter(id__in=permission_ids)
+                group.permissions.set(permissions)
+            
+            return JsonResponse({
+                'status': 'success',
+                'message': f'Group "{group.name}" created successfully',
+                'group_id': group.id
+            })
+            
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+    
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
+
+# Admin Edit Group (AJAX endpoint)
+@login_required
+@admin_required
+def admin_edit_group(request, group_id):
+    from django.contrib.auth.models import Group, Permission
+    
+    group = get_object_or_404(Group, id=group_id)
+    
+    if request.method == 'GET':
+        # Return group data as JSON
+        group_permissions = list(group.permissions.values_list('id', flat=True))
+        return JsonResponse({
+            'id': group.id,
+            'name': group.name,
+            'permissions': group_permissions,
+            'user_count': group.user_set.count(),
+        })
+    
+    elif request.method == 'POST':
+        try:
+            name = request.POST.get('name', '').strip()
+            selected_permissions = request.POST.getlist('permissions')
+            
+            if not name:
+                return JsonResponse({'status': 'error', 'message': 'Group name is required'}, status=400)
+            
+            # Check if group name already exists (excluding current group)
+            if Group.objects.filter(name=name).exclude(id=group.id).exists():
+                return JsonResponse({'status': 'error', 'message': 'Group name already exists'}, status=400)
+            
+            # Update group name
+            group.name = name
+            group.save()
+            
+            # Update permissions
+            if selected_permissions:
+                permission_ids = [int(pid) for pid in selected_permissions if pid.isdigit()]
+                permissions = Permission.objects.filter(id__in=permission_ids)
+                group.permissions.set(permissions)
+            else:
+                group.permissions.clear()
+            
+            return JsonResponse({
+                'status': 'success',
+                'message': f'Group "{group.name}" updated successfully'
+            })
+            
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+    
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
+
+# Admin Delete Group (AJAX endpoint)
+@login_required
+@admin_required
+@require_http_methods(["POST"])
+def admin_delete_group(request, group_id):
+    from django.contrib.auth.models import Group
+    
+    group = get_object_or_404(Group, id=group_id)
+    group_name = group.name
+    
+    try:
+        # Check if group has users
+        user_count = group.user_set.count()
+        if user_count > 0:
+            return JsonResponse({
+                'status': 'error',
+                'message': f'Cannot delete group. It has {user_count} user(s) assigned. Please remove users first.'
+            }, status=400)
+        
+        group.delete()
+        return JsonResponse({
+            'status': 'success',
+            'message': f'Group "{group_name}" deleted successfully'
+        })
+        
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
 # Admin Assign User to Group
 @login_required

@@ -29,7 +29,7 @@
     <!-- Logo Section -->
     <div class="h-16 flex items-center justify-between px-4 border-b border-slate-700 bg-slate-900/80 backdrop-blur-lg sticky top-0 z-10">
         <a href="{% url 'admin_dashboard' %}" class="flex items-center space-x-2 flex-1">
-            <div class="w-10 h-10 gradient-purple rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
+            <div class="w-10 h-10 flex items-center justify-center flex-shrink-0 overflow-hidden">
                 {% if site_logo %}
                     {% if site_logo|slice:':4' == 'http' or site_logo|slice:':2' == '//' %}
                         <img src="{{ site_logo }}" alt="{{ site_name }}" class="w-full h-full object-cover">

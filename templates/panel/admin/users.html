@@ -5,7 +5,15 @@
 
 {% block admin_content %}
 <div class="space-y-6">
-    <h1 class="text-3xl font-bold">{% trans "Users Management" %}</h1>
+    <div class="flex justify-between items-center">
+        <h1 class="text-3xl font-bold">{% trans "Users Management" %}</h1>
+        <button onclick="showCreateModal()" class="btn-primary">
+            <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+            </svg>
+            {% trans "Create User" %}
+        </button>
+    </div>
     
     <!-- Filters -->
     <div class="card-glass rounded-xl p-4">
@@ -85,6 +93,108 @@
                     {% endfor %}
                 </tbody>
             </table>
+        </div>
+    </div>
+
+    <!-- Create User Modal -->
+    <div id="createUserModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div class="bg-slate-800 rounded-xl p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold">{% trans "Create New User" %}</h3>
+                <button onclick="closeCreateModal()" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+            </div>
+            <form id="createUserForm" method="post">
+                {% csrf_token %}
+                <div class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">{% trans "Username" %} <span class="text-red-400">*</span></label>
+                            <input type="text" id="create_username" name="username" required minlength="3"
+                                   class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">{% trans "Email" %} <span class="text-red-400">*</span></label>
+                            <input type="email" id="create_email" name="email" required
+                                   class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white">
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">{% trans "Password" %} <span class="text-red-400">*</span></label>
+                            <input type="password" id="create_password" name="password" required minlength="8"
+                                   class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">{% trans "Confirm Password" %} <span class="text-red-400">*</span></label>
+                            <input type="password" id="create_password_confirm" name="password_confirm" required minlength="8"
+                                   class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white">
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">{% trans "First Name" %}</label>
+                            <input type="text" id="create_first_name" name="first_name"
+                                   class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">{% trans "Last Name" %}</label>
+                            <input type="text" id="create_last_name" name="last_name"
+                                   class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white">
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">{% trans "Role" %}</label>
+                            <select id="create_role" name="role" required
+                                    class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white">
+                                <option value="user">{% trans "User" %}</option>
+                                <option value="reseller">{% trans "Reseller" %}</option>
+                                <option value="admin">{% trans "Admin" %}</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">{% trans "Status" %}</label>
+                            <select id="create_is_active" name="is_active"
+                                    class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white">
+                                <option value="true">{% trans "Active" %}</option>
+                                <option value="false">{% trans "Inactive" %}</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">{% trans "Initial Balance" %}</label>
+                        <input type="number" id="create_balance" name="balance" step="0.01" min="0" value="0.00"
+                               class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">{% trans "Groups" %}</label>
+                        <div class="bg-slate-700 border border-slate-600 rounded-lg p-3 max-h-48 overflow-y-auto">
+                            {% for group in all_groups %}
+                            <label class="flex items-center gap-2 p-2 hover:bg-slate-600 rounded cursor-pointer">
+                                <input type="checkbox" name="groups" value="{{ group.id }}" class="rounded create-group-checkbox">
+                                <span class="flex-1 text-white">{{ group.name }}</span>
+                                <span class="text-xs text-gray-400">({{ group.permissions.count }} {% trans "perms" %})</span>
+                            </label>
+                            {% empty %}
+                            <p class="text-gray-400 text-sm">{% trans "No groups available" %}</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <div id="createUserError" class="hidden bg-red-900/50 border border-red-500 rounded-lg p-3 text-red-300 text-sm"></div>
+                    <div id="createUserSuccess" class="hidden bg-green-900/50 border border-green-500 rounded-lg p-3 text-green-300 text-sm"></div>
+                </div>
+                
+                <div class="flex gap-2 mt-6">
+                    <button type="submit" class="btn-primary flex-1">{% trans "Create User" %}</button>
+                    <button type="button" onclick="closeCreateModal()" class="btn-secondary flex-1">{% trans "Cancel" %}</button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -215,6 +325,97 @@
 
     <script>
         let currentEditUserId = null;
+        
+        // Create User Modal Functions
+        function showCreateModal() {
+            const modal = document.getElementById('createUserModal');
+            const form = document.getElementById('createUserForm');
+            const errorDiv = document.getElementById('createUserError');
+            const successDiv = document.getElementById('createUserSuccess');
+            
+            // Reset form and hide messages
+            form.reset();
+            errorDiv.classList.add('hidden');
+            successDiv.classList.add('hidden');
+            
+            // Set form action
+            form.action = '{% url "admin_create_user" %}';
+            
+            modal.classList.remove('hidden');
+        }
+        
+        function closeCreateModal() {
+            document.getElementById('createUserModal').classList.add('hidden');
+            document.getElementById('createUserForm').reset();
+            document.getElementById('createUserError').classList.add('hidden');
+            document.getElementById('createUserSuccess').classList.add('hidden');
+        }
+        
+        function showCreateError(message) {
+            const errorDiv = document.getElementById('createUserError');
+            errorDiv.textContent = message;
+            errorDiv.classList.remove('hidden');
+        }
+        
+        function showCreateSuccess(message) {
+            const successDiv = document.getElementById('createUserSuccess');
+            successDiv.textContent = message;
+            successDiv.classList.remove('hidden');
+        }
+        
+        // Handle create user form submission
+        document.getElementById('createUserForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const form = e.target;
+            const formData = new FormData(form);
+            const errorDiv = document.getElementById('createUserError');
+            const successDiv = document.getElementById('createUserSuccess');
+            
+            // Hide previous messages
+            errorDiv.classList.add('hidden');
+            successDiv.classList.add('hidden');
+            
+            // Validate passwords match
+            const password = formData.get('password');
+            const passwordConfirm = formData.get('password_confirm');
+            
+            if (password !== passwordConfirm) {
+                showCreateError('Passwords do not match');
+                return;
+            }
+            
+            // Disable form during submission
+            form.style.opacity = '0.5';
+            form.style.pointerEvents = 'none';
+            
+            try {
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.status === 'success') {
+                    showCreateSuccess(data.message || 'User created successfully');
+                    // Reload page after 1.5 seconds
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    showCreateError(data.message || 'Failed to create user');
+                }
+            } catch (error) {
+                showCreateError('Error creating user: ' + error.message);
+            } finally {
+                form.style.opacity = '1';
+                form.style.pointerEvents = 'auto';
+            }
+        });
         
         // Edit User Modal Functions
         async function showEditModal(userId) {
@@ -357,8 +558,17 @@
         
         // Close modals on outside click
         document.addEventListener('DOMContentLoaded', function() {
+            const createModal = document.getElementById('createUserModal');
             const editModal = document.getElementById('editUserModal');
             const groupModal = document.getElementById('groupModal');
+            
+            if (createModal) {
+                createModal.addEventListener('click', function(e) {
+                    if (e.target === this) {
+                        closeCreateModal();
+                    }
+                });
+            }
             
             if (editModal) {
                 editModal.addEventListener('click', function(e) {
