@@ -17,20 +17,39 @@
     
     <!-- Filters -->
     <div class="card-glass rounded-xl p-4">
-        <form method="get" class="flex gap-4">
-            <input type="text" name="search" value="{{ search }}" placeholder="{% trans 'Search users...' %}" class="flex-1 bg-slate-700 border border-slate-600 rounded-lg px-4 py-2">
+        <form method="get" class="flex gap-4 flex-wrap">
+            <input type="text" name="search" value="{{ search }}" placeholder="{% trans 'Search users...' %}" class="flex-1 min-w-[200px] bg-slate-700 border border-slate-600 rounded-lg px-4 py-2">
             <select name="role" class="bg-slate-700 border border-slate-600 rounded-lg px-4 py-2">
                 <option value="">{% trans "All Roles" %}</option>
                 <option value="admin" {% if role_filter == 'admin' %}selected{% endif %}>{% trans "Admin" %}</option>
                 <option value="reseller" {% if role_filter == 'reseller' %}selected{% endif %}>{% trans "Reseller" %}</option>
                 <option value="user" {% if role_filter == 'user' %}selected{% endif %}>{% trans "User" %}</option>
             </select>
+            {% if per_page %}<input type="hidden" name="per_page" value="{{ per_page }}">{% endif %}
             <button type="submit" class="btn-primary">{% trans "Filter" %}</button>
+            {% if search or role_filter %}
+            <a href="{% url 'admin_users' %}{% if per_page %}?per_page={{ per_page }}{% endif %}" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm">{% trans "Clear" %}</a>
+            {% endif %}
         </form>
     </div>
     
     <!-- Users Table -->
     <div class="card-glass rounded-xl p-6">
+        <div class="mb-4 flex justify-between items-center flex-wrap gap-4">
+            <div class="text-sm text-gray-400">
+                {% trans "Showing" %} {{ users.start_index }} - {{ users.end_index }} {% trans "of" %} {{ users.paginator.count }} {% trans "users" %}
+            </div>
+            <form method="get" class="flex items-center gap-2">
+                {% if search %}<input type="hidden" name="search" value="{{ search }}">{% endif %}
+                {% if role_filter %}<input type="hidden" name="role" value="{{ role_filter }}">{% endif %}
+                <label for="per_page" class="text-sm text-gray-400">{% trans "Items per page:" %}</label>
+                <select name="per_page" id="per_page" onchange="this.form.submit()" class="bg-slate-700 border border-slate-600 rounded-lg px-3 py-1 text-sm">
+                    {% for option in per_page_options %}
+                    <option value="{{ option }}" {% if per_page == option %}selected{% endif %}>{{ option }}</option>
+                    {% endfor %}
+                </select>
+            </form>
+        </div>
         <div class="overflow-x-auto">
             <table class="w-full">
                 <thead>
@@ -94,6 +113,44 @@
                 </tbody>
             </table>
         </div>
+        
+        <!-- Pagination -->
+        {% if users.has_other_pages %}
+        <div class="mt-6 flex items-center justify-between flex-wrap gap-4">
+            <div class="text-sm text-gray-400">
+                {% trans "Page" %} {{ users.number }} {% trans "of" %} {{ users.paginator.num_pages }}
+            </div>
+            <div class="flex gap-2 flex-wrap">
+                {% if users.has_previous %}
+                <a href="?page=1{% if search %}&search={{ search|urlencode }}{% endif %}{% if role_filter %}&role={{ role_filter }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm">
+                    {% trans "First" %}
+                </a>
+                <a href="?page={{ users.previous_page_number }}{% if search %}&search={{ search|urlencode }}{% endif %}{% if role_filter %}&role={{ role_filter }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm">
+                    {% trans "Previous" %}
+                </a>
+                {% endif %}
+                
+                {% for num in users.paginator.page_range %}
+                    {% if users.number == num %}
+                    <span class="px-3 py-2 bg-purple-600 rounded-lg text-sm">{{ num }}</span>
+                    {% elif num > users.number|add:'-3' and num < users.number|add:'3' %}
+                    <a href="?page={{ num }}{% if search %}&search={{ search|urlencode }}{% endif %}{% if role_filter %}&role={{ role_filter }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm">
+                        {{ num }}
+                    </a>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if users.has_next %}
+                <a href="?page={{ users.next_page_number }}{% if search %}&search={{ search|urlencode }}{% endif %}{% if role_filter %}&role={{ role_filter }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm">
+                    {% trans "Next" %}
+                </a>
+                <a href="?page={{ users.paginator.num_pages }}{% if search %}&search={{ search|urlencode }}{% endif %}{% if role_filter %}&role={{ role_filter }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm">
+                    {% trans "Last" %}
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
     </div>
 
     <!-- Create User Modal -->

@@ -16,6 +16,7 @@ from django.db.models import Sum, Count, Q
 from django.utils import timezone
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from datetime import timedelta
 import json
 import csv
@@ -26,6 +27,7 @@ from io import BytesIO
 import base64
 import secrets
 import stripe
+import requests
 
 from .models import (
     UserProfile, Service, ServiceCategory, Order, SubscriptionPackage,
@@ -1127,8 +1129,35 @@ def admin_cancel(request):
 @login_required
 @admin_required
 def admin_services(request):
-    services = Service.objects.all().order_by('category', 'name')
+    services = Service.objects.all().select_related('category').order_by('category', 'name')
     categories = ServiceCategory.objects.all().order_by('order')
+    
+    # Search functionality
+    search = request.GET.get('search', '')
+    if search:
+        services = services.filter(
+            Q(name__icontains=search) |
+            Q(description__icontains=search) |
+            Q(category__name__icontains=search) |
+            Q(external_service_id__icontains=search)
+        )
+    
+    # Category filter
+    category_filter = request.GET.get('category', '')
+    if category_filter:
+        services = services.filter(category_id=category_filter)
+    
+    # Status filter
+    status_filter = request.GET.get('status', '')
+    if status_filter == 'active':
+        services = services.filter(is_active=True)
+    elif status_filter == 'inactive':
+        services = services.filter(is_active=False)
+    
+    # Supplier filter
+    supplier_filter = request.GET.get('supplier', '')
+    if supplier_filter:
+        services = services.filter(supplier_api=supplier_filter)
     
     if request.method == 'POST':
         action = request.POST.get('action')
@@ -1145,14 +1174,228 @@ def admin_services(request):
                 messages.success(request, f'Service {service.name} deleted')
         except Service.DoesNotExist:
             messages.error(request, 'Service not found')
-        return redirect('admin_services')
+        
+        # Preserve query parameters when redirecting (including per_page)
+        query_params = request.GET.urlencode()
+        redirect_url = 'admin_services'
+        if query_params:
+            redirect_url += '?' + query_params
+        return redirect(redirect_url)
+    
+    # Pagination - Get per_page from request, validate and set default
+    per_page = request.GET.get('per_page', '25')
+    valid_per_page_options = ['10', '25', '50', '100', '200']
+    if per_page not in valid_per_page_options:
+        per_page = '50'
+    per_page_int = int(per_page)
+    
+    paginator = Paginator(services, per_page_int)
+    page = request.GET.get('page', 1)
+    
+    try:
+        services_page = paginator.page(page)
+    except PageNotAnInteger:
+        services_page = paginator.page(1)
+    except EmptyPage:
+        services_page = paginator.page(paginator.num_pages)
     
     context = {
-        'services': services,
+        'services': services_page,
         'categories': categories,
+        'search': search,
+        'category_filter': category_filter,
+        'status_filter': status_filter,
+        'supplier_filter': supplier_filter,
+        'per_page': per_page,
+        'per_page_options': valid_per_page_options,
         'pending_tickets_count': Ticket.objects.filter(status__in=['open', 'in_progress']).count(),
     }
     return render(request, 'panel/admin/services.html', context)
+
+def sync_services_from_supplier(request, supplier='jap'):
+    """Sync services from supplier API (JAP, Peakerr, etc.)"""
+    from .settings_utils import get_setting
+    from django.conf import settings
+    from decimal import Decimal, InvalidOperation
+    
+    supplier_config = {
+        'jap': {
+            'url': get_setting('supplier_jap_url', 'https://justanotherpanel.com/api/v2'),
+            'key': get_setting('supplier_jap_key', getattr(settings, 'JAP_API_KEY', '')),
+        },
+        'peakerr': {
+            'url': get_setting('supplier_peakerr_url', 'https://peakerr.com/api/v2'),
+            'key': get_setting('supplier_peakerr_key', getattr(settings, 'PEAKERR_API_KEY', '')),
+        },
+        'smmkings': {
+            'url': get_setting('supplier_smmkings_url', 'https://smmkings.com/api/v2'),
+            'key': get_setting('supplier_smmkings_key', getattr(settings, 'SMMKINGS_API_KEY', '')),
+        },
+    }
+    
+    config = supplier_config.get(supplier)
+    if not config or not config['key']:
+        messages.error(request, f'{supplier.upper()} API key not configured. Please set it in admin settings.')
+        return redirect('admin_services')
+    
+    try:
+        # Fetch services from supplier API
+        payload = {
+            'key': config['key'],
+            'action': 'services',
+        }
+        
+        timeout = int(get_setting('supplier_timeout', '30'))
+        response = requests.post(config['url'], data=payload, timeout=timeout)
+        
+        if response.status_code != 200:
+            messages.error(request, f'Failed to fetch services from {supplier.upper()}: HTTP {response.status_code}')
+            return redirect('admin_services')
+        
+        data = response.json()
+        
+        # Handle different response formats
+        if isinstance(data, dict):
+            if 'error' in data:
+                messages.error(request, f'API Error: {data.get("error", "Unknown error")}')
+                return redirect('admin_services')
+            # Some APIs return services in a 'data' or 'services' key
+            services_data = data.get('data', data.get('services', []))
+        elif isinstance(data, list):
+            services_data = data
+        else:
+            messages.error(request, f'Unexpected response format from {supplier.upper()} API')
+            return redirect('admin_services')
+        
+        if not services_data:
+            messages.warning(request, f'No services found from {supplier.upper()} API')
+            return redirect('admin_services')
+        
+        # Category mapping from supplier categories to local categories
+        category_mapping = {
+            'Instagram': 'ig',
+            'Facebook': 'fb',
+            'TikTok': 'tt',
+            'YouTube': 'yt',
+            'Twitter': 'tw',
+            'Shopee': 'sh',
+            'Telegram': 'tg',
+        }
+        
+        # Get or create default category
+        default_category, _ = ServiceCategory.objects.get_or_create(
+            name='Other',
+            defaults={'is_active': True, 'order': 999}
+        )
+        
+        synced_count = 0
+        updated_count = 0
+        created_count = 0
+        
+        for service_data in services_data:
+            try:
+                # Extract service information (handle different API formats)
+                # JAP API typically returns service ID as 'service' field (integer or string)
+                service_id_raw = service_data.get('service') or service_data.get('id')
+                if service_id_raw is None:
+                    # Skip if no service ID found
+                    continue
+                service_id = str(service_id_raw)
+                
+                name = service_data.get('name', service_data.get('service', 'Unknown Service'))
+                if not name or name == 'Unknown Service':
+                    # Try to get name from other fields
+                    name = str(service_data.get('service', 'Unknown Service'))
+                
+                category_name = service_data.get('category', service_data.get('type', 'Other'))
+                rate_str = service_data.get('rate', service_data.get('price', '0'))
+                min_order = int(service_data.get('min', service_data.get('min_order', 1)))
+                max_order = int(service_data.get('max', service_data.get('max_order', 100000)))
+                description = service_data.get('description', service_data.get('desc', ''))
+                
+                # Convert rate to Decimal (handle per 1000 pricing)
+                try:
+                    rate = Decimal(str(rate_str))
+                except (InvalidOperation, ValueError):
+                    rate = Decimal('0')
+                
+                # Map category
+                service_type = category_mapping.get(category_name, 'other')
+                
+                # Get or create category
+                category, _ = ServiceCategory.objects.get_or_create(
+                    name=category_name,
+                    defaults={'is_active': True, 'order': 0}
+                )
+                
+                # Try to find existing service by external_service_id first
+                try:
+                    service = Service.objects.get(external_service_id=service_id, supplier_api=supplier)
+                    created = False
+                except Service.DoesNotExist:
+                    # If not found, try to find by name and supplier (in case external_service_id wasn't set before)
+                    try:
+                        service = Service.objects.get(name=name, supplier_api=supplier)
+                        # Update external_service_id if it was missing
+                        service.external_service_id = service_id
+                        created = False
+                    except Service.DoesNotExist:
+                        # Create new service
+                        service = Service(
+                            external_service_id=service_id,
+                            supplier_api=supplier,
+                            name=name,
+                            category=category,
+                            service_type=service_type,
+                            rate=rate,
+                            min_order=min_order,
+                            max_order=max_order,
+                            description=description,
+                            is_active=True,
+                        )
+                        created = True
+                
+                if not created:
+                    # Update existing service
+                    service.name = name
+                    service.category = category
+                    service.service_type = service_type
+                    service.rate = rate
+                    service.min_order = min_order
+                    service.max_order = max_order
+                    service.description = description
+                    service.supplier_api = supplier
+                    service.external_service_id = service_id  # Ensure it's set
+                    service.save()
+                    updated_count += 1
+                else:
+                    service.save()
+                    created_count += 1
+                
+                synced_count += 1
+                
+            except Exception as e:
+                # Log error but continue with other services
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f'Error syncing service {service_data}: {str(e)}')
+                continue
+        
+        messages.success(
+            request, 
+            f'Successfully synced {synced_count} services from {supplier.upper()}: '
+            f'{created_count} created, {updated_count} updated'
+        )
+        
+    except requests.exceptions.RequestException as e:
+        messages.error(request, f'Network error connecting to {supplier.upper()} API: {str(e)}')
+    except Exception as e:
+        messages.error(request, f'Error syncing services: {str(e)}')
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.exception('Service sync error')
+    
+    return redirect('admin_services')
 
 # Admin Transaction Logs
 @login_required
@@ -1249,6 +1492,21 @@ def admin_transactions_export(request):
 def admin_categories(request):
     categories = ServiceCategory.objects.all().order_by('order')
     
+    # Search functionality
+    search = request.GET.get('search', '')
+    if search:
+        categories = categories.filter(
+            Q(name__icontains=search) |
+            Q(name_km__icontains=search)
+        )
+    
+    # Status filter
+    status_filter = request.GET.get('status', '')
+    if status_filter == 'active':
+        categories = categories.filter(is_active=True)
+    elif status_filter == 'inactive':
+        categories = categories.filter(is_active=False)
+    
     if request.method == 'POST':
         action = request.POST.get('action')
         
@@ -1279,10 +1537,36 @@ def admin_categories(request):
             except ServiceCategory.DoesNotExist:
                 messages.error(request, 'Category not found')
         
-        return redirect('admin_categories')
+        # Preserve query parameters when redirecting
+        query_params = request.GET.urlencode()
+        redirect_url = 'admin_categories'
+        if query_params:
+            redirect_url += '?' + query_params
+        return redirect(redirect_url)
+    
+    # Pagination - Get per_page from request, validate and set default
+    per_page = request.GET.get('per_page', '25')
+    valid_per_page_options = ['10', '25', '50', '100', '200']
+    if per_page not in valid_per_page_options:
+        per_page = '25'
+    per_page_int = int(per_page)
+    
+    paginator = Paginator(categories, per_page_int)
+    page = request.GET.get('page', 1)
+    
+    try:
+        categories_page = paginator.page(page)
+    except PageNotAnInteger:
+        categories_page = paginator.page(1)
+    except EmptyPage:
+        categories_page = paginator.page(paginator.num_pages)
     
     context = {
-        'categories': categories,
+        'categories': categories_page,
+        'search': search,
+        'status_filter': status_filter,
+        'per_page': per_page,
+        'per_page_options': valid_per_page_options,
         'pending_tickets_count': Ticket.objects.filter(status__in=['open', 'in_progress']).count(),
     }
     return render(request, 'panel/admin/categories.html', context)
@@ -1527,16 +1811,35 @@ def admin_users(request):
     if role_filter:
         users = users.filter(profile__role=role_filter)
     
-    users = users.order_by('-date_joined')[:100]
+    users = users.order_by('-date_joined')
+    
+    # Pagination - Get per_page from request, validate and set default
+    per_page = request.GET.get('per_page', '25')
+    valid_per_page_options = ['10', '25', '50', '100', '200']
+    if per_page not in valid_per_page_options:
+        per_page = '25'
+    per_page_int = int(per_page)
+    
+    paginator = Paginator(users, per_page_int)
+    page = request.GET.get('page', 1)
+    
+    try:
+        users_page = paginator.page(page)
+    except PageNotAnInteger:
+        users_page = paginator.page(1)
+    except EmptyPage:
+        users_page = paginator.page(paginator.num_pages)
     
     # Get all groups for the modal
     all_groups = Group.objects.all().prefetch_related('permissions')
     
     context = {
-        'users': users,
+        'users': users_page,
         'all_groups': all_groups,
         'search': search,
         'role_filter': role_filter,
+        'per_page': per_page,
+        'per_page_options': valid_per_page_options,
         'pending_tickets_count': Ticket.objects.filter(status__in=['open', 'in_progress']).count(),
     }
     return render(request, 'panel/admin/users.html', context)
