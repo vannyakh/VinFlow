@@ -2758,7 +2758,24 @@ def transaction_logs(request):
     if status_filter:
         transactions = transactions.filter(status=status_filter)
     
-    # Calculate summary stats
+    # Pagination
+    per_page = request.GET.get('per_page', '10')
+    valid_per_page_options = ['10', '25', '50', '100']
+    if per_page not in valid_per_page_options:
+        per_page = '25'
+    per_page_int = int(per_page)
+    
+    paginator = Paginator(transactions, per_page_int)
+    page = request.GET.get('page', 1)
+    
+    try:
+        transactions_page = paginator.page(page)
+    except PageNotAnInteger:
+        transactions_page = paginator.page(1)
+    except EmptyPage:
+        transactions_page = paginator.page(paginator.num_pages)
+    
+    # Calculate summary stats (using all transactions, not just current page)
     total_deposited = Payment.objects.filter(
         user=request.user, 
         status='completed'
@@ -2770,10 +2787,12 @@ def transaction_logs(request):
     ).count()
     
     context = {
-        'transactions': transactions,
+        'transactions': transactions_page,
         'status_filter': status_filter,
         'total_deposited': total_deposited,
         'pending_count': pending_count,
+        'per_page': per_page,
+        'per_page_options': valid_per_page_options,
     }
     return render(request, 'panel/transaction_logs.html', context)
 

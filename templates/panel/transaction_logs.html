@@ -34,7 +34,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-gray-400 text-sm">{% trans "Total Transactions" %}</p>
-                    <p class="text-2xl font-bold text-cyan-400">{{ transactions|length }}</p>
+                    <p class="text-2xl font-bold text-cyan-400">{% if transactions.paginator %}{{ transactions.paginator.count }}{% else %}{{ transactions|length }}{% endif %}</p>
                 </div>
                 <div class="w-12 h-12 gradient-cyan rounded-lg flex items-center justify-center">
                     <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -77,19 +77,19 @@
     <!-- Filters -->
     <div class="card-glass rounded-xl p-4">
         <div class="flex gap-2 flex-wrap">
-            <a href="{% url 'transaction_logs' %}" class="px-4 py-2 rounded-lg {% if not status_filter %}bg-purple-600{% else %}bg-slate-700 hover:bg-slate-600{% endif %} text-sm transition">
+            <a href="{% url 'transaction_logs' %}{% if per_page %}?per_page={{ per_page }}{% endif %}" class="px-4 py-2 rounded-lg {% if not status_filter %}bg-purple-600{% else %}bg-slate-700 hover:bg-slate-600{% endif %} text-sm transition">
                 {% trans "All" %}
             </a>
-            <a href="?status=completed" class="px-4 py-2 rounded-lg {% if status_filter == 'completed' %}bg-purple-600{% else %}bg-slate-700 hover:bg-slate-600{% endif %} text-sm transition">
+            <a href="?status=completed{% if per_page %}&per_page={{ per_page }}{% endif %}" class="px-4 py-2 rounded-lg {% if status_filter == 'completed' %}bg-purple-600{% else %}bg-slate-700 hover:bg-slate-600{% endif %} text-sm transition">
                 {% trans "Completed" %}
             </a>
-            <a href="?status=pending" class="px-4 py-2 rounded-lg {% if status_filter == 'pending' %}bg-purple-600{% else %}bg-slate-700 hover:bg-slate-600{% endif %} text-sm transition">
+            <a href="?status=pending{% if per_page %}&per_page={{ per_page }}{% endif %}" class="px-4 py-2 rounded-lg {% if status_filter == 'pending' %}bg-purple-600{% else %}bg-slate-700 hover:bg-slate-600{% endif %} text-sm transition">
                 {% trans "Pending" %}
             </a>
-            <a href="?status=failed" class="px-4 py-2 rounded-lg {% if status_filter == 'failed' %}bg-purple-600{% else %}bg-slate-700 hover:bg-slate-600{% endif %} text-sm transition">
+            <a href="?status=failed{% if per_page %}&per_page={{ per_page }}{% endif %}" class="px-4 py-2 rounded-lg {% if status_filter == 'failed' %}bg-purple-600{% else %}bg-slate-700 hover:bg-slate-600{% endif %} text-sm transition">
                 {% trans "Failed" %}
             </a>
-            <a href="?status=canceled" class="px-4 py-2 rounded-lg {% if status_filter == 'canceled' %}bg-purple-600{% else %}bg-slate-700 hover:bg-slate-600{% endif %} text-sm transition">
+            <a href="?status=canceled{% if per_page %}&per_page={{ per_page }}{% endif %}" class="px-4 py-2 rounded-lg {% if status_filter == 'canceled' %}bg-purple-600{% else %}bg-slate-700 hover:bg-slate-600{% endif %} text-sm transition">
                 {% trans "Canceled" %}
             </a>
         </div>
@@ -151,6 +151,56 @@
                 </tbody>
             </table>
         </div>
+        
+        <!-- Pagination -->
+        {% if transactions.has_other_pages %}
+        <div class="mt-6 flex items-center justify-between flex-wrap gap-4">
+            <div class="flex items-center gap-4">
+                <div class="text-sm text-gray-400">
+                    {% trans "Page" %} {{ transactions.number }} {% trans "of" %} {{ transactions.paginator.num_pages }}
+                </div>
+                {% if per_page_options %}
+                <div class="flex items-center gap-2">
+                    <span class="text-sm text-gray-400">{% trans "Per page" %}:</span>
+                    <select onchange="window.location.href='?{% if status_filter %}status={{ status_filter }}&{% endif %}per_page=' + this.value" class="px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm text-white border border-slate-600">
+                        {% for option in per_page_options %}
+                        <option value="{{ option }}" {% if per_page == option %}selected{% endif %}>{{ option }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endif %}
+            </div>
+            <div class="flex gap-2 flex-wrap">
+                {% if transactions.has_previous %}
+                <a href="?page=1{% if status_filter %}&status={{ status_filter }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm transition">
+                    {% trans "First" %}
+                </a>
+                <a href="?page={{ transactions.previous_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm transition">
+                    {% trans "Previous" %}
+                </a>
+                {% endif %}
+                
+                {% for num in transactions.paginator.page_range %}
+                    {% if transactions.number == num %}
+                    <span class="px-3 py-2 bg-purple-600 rounded-lg text-sm">{{ num }}</span>
+                    {% elif num > transactions.number|add:'-3' and num < transactions.number|add:'3' %}
+                    <a href="?page={{ num }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm transition">
+                        {{ num }}
+                    </a>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if transactions.has_next %}
+                <a href="?page={{ transactions.next_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm transition">
+                    {% trans "Next" %}
+                </a>
+                <a href="?page={{ transactions.paginator.num_pages }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm transition">
+                    {% trans "Last" %}
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
     </div>
     
     
