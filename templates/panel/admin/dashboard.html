@@ -5,7 +5,46 @@
 
 {% block admin_content %}
 <div class="space-y-6">
-    <h1 class="text-3xl font-bold">{% trans "Admin Dashboard" %}</h1>
+    <div class="flex justify-between items-center">
+        <h1 class="text-3xl font-bold">{% trans "Admin Dashboard" %}</h1>
+    </div>
+    
+    <!-- Maintenance Mode Alert -->
+    {% if maintenance_mode %}
+    <div class="card-glass rounded-xl p-4 border-2 border-yellow-500 bg-yellow-900/20">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <svg class="w-6 h-6 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                </svg>
+                <div>
+                    <p class="font-semibold text-yellow-400">{% trans "Maintenance Mode is Active" %}</p>
+                    <p class="text-sm text-gray-300">{% trans "Regular users cannot access the site. Only admins can log in." %}</p>
+                </div>
+            </div>
+            <button onclick="toggleMaintenanceMode()" class="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 rounded-lg text-white font-medium transition-colors">
+                {% trans "Disable Maintenance" %}
+            </button>
+        </div>
+    </div>
+    {% else %}
+    <div class="card-glass rounded-xl p-4">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <svg class="w-6 h-6 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                </svg>
+                <div>
+                    <p class="font-semibold text-green-400">{% trans "System is Online" %}</p>
+                    <p class="text-sm text-gray-400">{% trans "All users can access the site normally." %}</p>
+                </div>
+            </div>
+            <button onclick="toggleMaintenanceMode()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-white font-medium transition-colors">
+                {% trans "Enable Maintenance" %}
+            </button>
+        </div>
+    </div>
+    {% endif %}
     
     <!-- Statistics Cards -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -145,6 +184,32 @@ new Chart(revenueCtx, {
         }
     }
 });
+
+// Toggle Maintenance Mode
+function toggleMaintenanceMode() {
+    if (confirm('{% trans "Are you sure you want to toggle maintenance mode?" %}')) {
+        fetch('{% url "toggle_maintenance_mode" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Reload page to show updated status
+                location.reload();
+            } else {
+                alert('{% trans "Error toggling maintenance mode" %}');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('{% trans "Error toggling maintenance mode" %}');
+        });
+    }
+}
 </script>
 {% endblock %}
 

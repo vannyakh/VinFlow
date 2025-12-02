@@ -105,6 +105,28 @@ def set_language(request):
     
     return response
 
+# Maintenance Mode View
+def maintenance(request):
+    """
+    Display maintenance mode page with custom message.
+    """
+    from .settings_utils import get_setting
+    
+    maintenance_message = get_setting(
+        'maintenance_message', 
+        default='We are currently performing maintenance. Please check back soon.'
+    )
+    site_name = get_setting('site_name', default='VinFlow')
+    contact_email = get_setting('site_email', default='')
+    
+    context = {
+        'maintenance_message': maintenance_message,
+        'site_name': site_name,
+        'contact_email': contact_email,
+    }
+    
+    return render(request, 'panel/maintenance.html', context)
+
 # User Registration
 def register(request):
     if request.user.is_authenticated:
@@ -976,6 +998,10 @@ def admin_dashboard(request):
     # Pending tickets count for sidebar
     pending_tickets_count = Ticket.objects.filter(status__in=['open', 'in_progress']).count()
     
+    # Get maintenance mode status
+    from .settings_utils import get_setting_bool
+    maintenance_mode = get_setting_bool('maintenance_mode', default=False)
+    
     context = {
         'total_users': total_users,
         'total_orders': total_orders,
@@ -985,6 +1011,7 @@ def admin_dashboard(request):
         'top_services': top_services,
         'recent_orders': recent_orders,
         'pending_tickets_count': pending_tickets_count,
+        'maintenance_mode': maintenance_mode,
     }
     return render(request, 'panel/admin/dashboard.html', context)
 
@@ -1779,6 +1806,27 @@ def admin_settings(request):
         'pending_tickets_count': Ticket.objects.filter(status__in=['open', 'in_progress']).count(),
     }
     return render(request, 'panel/admin/settings.html', context)
+
+# Toggle Maintenance Mode (AJAX)
+@login_required
+@admin_required
+@require_http_methods(["POST"])
+def toggle_maintenance_mode(request):
+    """
+    Toggle maintenance mode on/off via AJAX
+    """
+    from .settings_utils import get_setting_bool, set_setting
+    
+    current_status = get_setting_bool('maintenance_mode', default=False)
+    new_status = not current_status
+    
+    set_setting('maintenance_mode', 'true' if new_status else 'false', user=request.user)
+    
+    return JsonResponse({
+        'success': True,
+        'maintenance_mode': new_status,
+        'message': 'Maintenance mode ' + ('enabled' if new_status else 'disabled')
+    })
 
 # Admin Tickets Management
 @login_required

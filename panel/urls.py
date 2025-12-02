@@ -4,6 +4,7 @@ from . import api_views
 
 urlpatterns = [
     path('', views.dashboard, name='dashboard'),
+    path('maintenance/', views.maintenance, name='maintenance'),
     path('services/', views.services, name='services'),
     path('orders/', views.orders, name='orders'),
     path('orders/create/', views.create_order, name='create_order'),
@@ -38,6 +39,7 @@ urlpatterns = [
     path('admin/transactions/export/', views.admin_transactions_export, name='admin_transactions_export'),
     path('admin/categories/', views.admin_categories, name='admin_categories'),
     path('admin/settings/', views.admin_settings, name='admin_settings'),
+    path('admin/settings/toggle-maintenance/', views.toggle_maintenance_mode, name='toggle_maintenance_mode'),
     path('admin/tickets/', views.admin_tickets, name='admin_tickets'),
     path('admin/users/', views.admin_users, name='admin_users'),
     path('admin/users/create/', views.admin_create_user, name='admin_create_user'),
