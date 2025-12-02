@@ -17,13 +17,22 @@ class Command(BaseCommand):
                 'order': 1,
             },
             {
+                'key': 'site_logo',
+                'label': 'Site Logo',
+                'setting_type': 'image',
+                'group': 'general',
+                'default_value': '',
+                'description': 'Site logo image (upload or enter URL/path)',
+                'order': 2,
+            },
+            {
                 'key': 'site_description',
                 'label': 'Site Description',
                 'setting_type': 'textarea',
                 'group': 'general',
                 'default_value': 'Professional SMM Panel for Social Media Marketing',
                 'description': 'Site meta description for SEO',
-                'order': 2,
+                'order': 3,
             },
             {
                 'key': 'site_email',
@@ -32,7 +41,7 @@ class Command(BaseCommand):
                 'group': 'general',
                 'default_value': 'admin@vinflow.com',
                 'description': 'Main contact email address',
-                'order': 3,
+                'order': 4,
             },
             {
                 'key': 'min_deposit',

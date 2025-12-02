@@ -1569,6 +1569,9 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+  .overflow-hidden {
+    overflow: hidden;
+  }
   .datatable-container {
     .datatable-wrapper & thead tr.search-filtering-row th {
       padding-top: 0;
