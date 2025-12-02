@@ -1,0 +1,56 @@
+{% extends 'panel/admin/base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Reports" %} - VinFlow{% endblock %}
+
+{% block admin_content %}
+<div class="space-y-6">
+    <h1 class="text-3xl font-bold">{% trans "Reports" %}</h1>
+    
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="card-glass rounded-xl p-6">
+            <p class="text-gray-400 text-sm">{% trans "Revenue (7 Days)" %}</p>
+            <p class="text-3xl font-bold text-green-400">${{ revenue_7d|floatformat:2 }}</p>
+        </div>
+        <div class="card-glass rounded-xl p-6">
+            <p class="text-gray-400 text-sm">{% trans "Revenue (30 Days)" %}</p>
+            <p class="text-3xl font-bold text-green-400">${{ revenue_30d|floatformat:2 }}</p>
+        </div>
+        <div class="card-glass rounded-xl p-6">
+            <p class="text-gray-400 text-sm">{% trans "Orders (7 Days)" %}</p>
+            <p class="text-3xl font-bold text-purple-400">{{ orders_7d }}</p>
+        </div>
+        <div class="card-glass rounded-xl p-6">
+            <p class="text-gray-400 text-sm">{% trans "Orders (30 Days)" %}</p>
+            <p class="text-3xl font-bold text-purple-400">{{ orders_30d }}</p>
+        </div>
+    </div>
+    
+    <!-- Service Performance -->
+    <div class="card-glass rounded-xl p-6">
+        <h2 class="text-xl font-bold mb-4">{% trans "Service Performance" %}</h2>
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="border-b border-slate-700">
+                        <th class="text-left py-3 px-4">{% trans "Service" %}</th>
+                        <th class="text-left py-3 px-4">{% trans "Total Orders" %}</th>
+                        <th class="text-left py-3 px-4">{% trans "Total Revenue" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for service in service_performance %}
+                    <tr class="border-b border-slate-800">
+                        <td class="py-3 px-4">{{ service.name }}</td>
+                        <td class="py-3 px-4">{{ service.total_orders|default:0 }}</td>
+                        <td class="py-3 px-4">${{ service.total_revenue|default:0|floatformat:2 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

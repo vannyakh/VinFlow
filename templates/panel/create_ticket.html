@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if is_khmer %}បង្កើត Ticket{% else %}Create Ticket{% endif %} - VinFlow{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <h1 class="text-3xl font-bold mb-6">{% if is_khmer %}បង្កើត Ticket ថ្មី{% else %}Create New Ticket{% endif %}</h1>
+    
+    <div class="card-glass rounded-xl p-6">
+        <form method="post" class="space-y-4">
+            {% csrf_token %}
+            
+            <div>
+                <label class="block text-sm font-medium mb-2">{% if is_khmer %}ប្រធានបទ{% else %}Subject{% endif %} *</label>
+                <input type="text" name="subject" required class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 focus:border-purple-500 focus:outline-none">
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium mb-2">{% if is_khmer %}អាទិភាព{% else %}Priority{% endif %}</label>
+                <select name="priority" class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 focus:border-purple-500 focus:outline-none">
+                    <option value="low">{% if is_khmer %}ទាប{% else %}Low{% endif %}</option>
+                    <option value="medium" selected>{% if is_khmer %}មធ្យម{% else %}Medium{% endif %}</option>
+                    <option value="high">{% if is_khmer %}ខ្ពស់{% else %}High{% endif %}</option>
+                    <option value="urgent">{% if is_khmer %}បន្ទាន់{% else %}Urgent{% endif %}</option>
+                </select>
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium mb-2">{% if is_khmer %}សារ{% else %}Message{% endif %} *</label>
+                <textarea name="message" rows="6" required class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 focus:border-purple-500 focus:outline-none"></textarea>
+            </div>
+            
+            <div class="flex gap-2">
+                <button type="submit" class="btn-primary">{% if is_khmer %}បង្កើត{% else %}Create{% endif %}</button>
+                <a href="{% url 'tickets' %}" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg">
+                    {% if is_khmer %}បោះបង់{% else %}Cancel{% endif %}
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+

@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% load static %}
+
+{% block title %}{% trans "Verify 2FA" %} - VinFlow{% endblock %}
+
+{% block content %}
+<div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full space-y-8">
+        <div class="text-center">
+            <div class="w-16 h-16 gradient-purple rounded-xl flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                </svg>
+            </div>
+            <h2 class="text-3xl font-bold">{% trans "Two-Factor Authentication" %}</h2>
+            <p class="text-gray-400 mt-2">{% trans "Enter your verification code to continue" %}</p>
+        </div>
+        
+        <div class="card-glass rounded-xl p-8">
+            <form method="post" class="space-y-6" id="verifyForm">
+                {% csrf_token %}
+                
+                <!-- TOTP Code Input -->
+                <div>
+                    <label class="block text-sm font-medium mb-2">{% trans "Verification Code" %}</label>
+                    <input 
+                        type="text" 
+                        name="code" 
+                        id="code"
+                        required 
+                        maxlength="6" 
+                        pattern="[0-9]{6}" 
+                        placeholder="000000"
+                        autocomplete="one-time-code"
+                        inputmode="numeric"
+                        class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-center text-2xl tracking-widest focus:border-purple-500 focus:outline-none"
+                        autofocus
+                    >
+                    <p class="text-xs text-gray-400 mt-2 text-center">{% trans "Enter the 6-digit code from your authenticator app" %}</p>
+                </div>
+                
+                <div class="relative">
+                    <div class="absolute inset-0 flex items-center">
+                        <div class="w-full border-t border-slate-600"></div>
+                    </div>
+                    <div class="relative flex justify-center text-sm">
+                        <span class="px-2 bg-slate-800 text-gray-400">{% trans "OR" %}</span>
+                    </div>
+                </div>
+                
+                <!-- Backup Code Input -->
+                <div>
+                    <label class="block text-sm font-medium mb-2">{% trans "Backup Code" %}</label>
+                    <input 
+                        type="text" 
+                        name="backup_code" 
+                        id="backup_code"
+                        maxlength="8"
+                        placeholder="XXXXXXXX"
+                        class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-center font-mono focus:border-purple-500 focus:outline-none"
+                    >
+                    <p class="text-xs text-gray-400 mt-2 text-center">{% trans "Use a backup code if you can't access your authenticator app" %}</p>
+                </div>
+                
+                <button type="submit" class="w-full btn-primary">
+                    {% trans "Verify & Continue" %}
+                </button>
+            </form>
+            
+            <div class="mt-6 text-center">
+                <a href="{% url 'login' %}" class="text-sm text-gray-400 hover:text-purple-400">
+                    {% trans "Back to Login" %}
+                </a>
+            </div>
+        </div>
+        
+        <div class="text-center">
+            <p class="text-xs text-gray-500">
+                {% trans "Having trouble? Contact support for assistance." %}
+            </p>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const codeInput = document.getElementById('code');
+    const backupCodeInput = document.getElementById('backup_code');
+    const form = document.getElementById('verifyForm');
+    
+    // Auto-submit when 6 digits are entered
+    codeInput.addEventListener('input', function(e) {
+        const value = e.target.value.replace(/\D/g, '');
+        e.target.value = value;
+        
+        if (value.length === 6) {
+            backupCodeInput.value = ''; // Clear backup code if TOTP is entered
+        }
+    });
+    
+    // Clear TOTP code if backup code is entered
+    backupCodeInput.addEventListener('input', function(e) {
+        if (e.target.value.length > 0) {
+            codeInput.value = '';
+        }
+    });
+    
+    // Validate form submission
+    form.addEventListener('submit', function(e) {
+        const code = codeInput.value.trim();
+        const backupCode = backupCodeInput.value.trim();
+        
+        if (!code && !backupCode) {
+            e.preventDefault();
+            alert('{% trans "Please enter either a verification code or backup code" %}');
+            return false;
+        }
+    });
+});
+</script>
+{% endblock %}
+

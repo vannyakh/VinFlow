@@ -1,0 +1,103 @@
+{% extends 'panel/admin/base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Transaction Logs" %} - VinFlow{% endblock %}
+
+{% block admin_content %}
+<div class="space-y-6">
+    <div class="flex justify-between items-center">
+        <h1 class="text-3xl font-bold">{% trans "Transaction Logs" %}</h1>
+    </div>
+    
+    <!-- Search and Filters -->
+    <div class="card-glass rounded-xl p-4">
+        <form method="get" class="space-y-4">
+            <div class="flex gap-4 flex-wrap">
+                <input type="text" name="search" value="{{ search }}" placeholder="{% trans 'Search by Transaction ID, User, Email...' %}" class="flex-1 min-w-[200px] bg-slate-700 border border-slate-600 rounded-lg px-4 py-2">
+                <select name="status" class="bg-slate-700 border border-slate-600 rounded-lg px-4 py-2">
+                    <option value="">{% trans "All Status" %}</option>
+                    <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>{% trans "Completed" %}</option>
+                    <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>{% trans "Pending" %}</option>
+                    <option value="failed" {% if status_filter == 'failed' %}selected{% endif %}>{% trans "Failed" %}</option>
+                    <option value="canceled" {% if status_filter == 'canceled' %}selected{% endif %}>{% trans "Canceled" %}</option>
+                </select>
+                <select name="sort" class="bg-slate-700 border border-slate-600 rounded-lg px-4 py-2">
+                    <option value="-created_at" {% if sort_by == '-created_at' %}selected{% endif %}>{% trans "Newest First" %}</option>
+                    <option value="created_at" {% if sort_by == 'created_at' %}selected{% endif %}>{% trans "Oldest First" %}</option>
+                    <option value="-amount" {% if sort_by == '-amount' %}selected{% endif %}>{% trans "Amount: High to Low" %}</option>
+                    <option value="amount" {% if sort_by == 'amount' %}selected{% endif %}>{% trans "Amount: Low to High" %}</option>
+                    <option value="transaction_id" {% if sort_by == 'transaction_id' %}selected{% endif %}>{% trans "Transaction ID: A-Z" %}</option>
+                    <option value="-transaction_id" {% if sort_by == '-transaction_id' %}selected{% endif %}>{% trans "Transaction ID: Z-A" %}</option>
+                    <option value="user__username" {% if sort_by == 'user__username' %}selected{% endif %}>{% trans "User: A-Z" %}</option>
+                    <option value="-user__username" {% if sort_by == '-user__username' %}selected{% endif %}>{% trans "User: Z-A" %}</option>
+                </select>
+                <button type="submit" class="btn-primary">{% trans "Filter" %}</button>
+                <a href="{% url 'admin_transactions_export' %}?{% if search %}search={{ search }}&{% endif %}{% if status_filter %}status={{ status_filter }}&{% endif %}{% if sort_by %}sort={{ sort_by }}{% endif %}" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-sm font-medium">
+                    {% trans "Export CSV" %}
+                </a>
+            </div>
+        </form>
+    </div>
+    
+    <div class="card-glass rounded-xl p-6">
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="border-b border-slate-700">
+                        <th class="text-left py-3 px-4">
+                            <a href="?{% if search %}search={{ search }}&{% endif %}{% if status_filter %}status={{ status_filter }}&{% endif %}sort={% if sort_by == 'transaction_id' %}-transaction_id{% else %}transaction_id{% endif %}" class="hover:text-purple-400 flex items-center gap-1">
+                                {% trans "Transaction ID" %}
+                                {% if sort_by == 'transaction_id' %}↑{% elif sort_by == '-transaction_id' %}↓{% endif %}
+                            </a>
+                        </th>
+                        <th class="text-left py-3 px-4">
+                            <a href="?{% if search %}search={{ search }}&{% endif %}{% if status_filter %}status={{ status_filter }}&{% endif %}sort={% if sort_by == 'user__username' %}-user__username{% else %}user__username{% endif %}" class="hover:text-purple-400 flex items-center gap-1">
+                                {% trans "User" %}
+                                {% if sort_by == 'user__username' %}↑{% elif sort_by == '-user__username' %}↓{% endif %}
+                            </a>
+                        </th>
+                        <th class="text-left py-3 px-4">
+                            <a href="?{% if search %}search={{ search }}&{% endif %}{% if status_filter %}status={{ status_filter }}&{% endif %}sort={% if sort_by == '-amount' %}amount{% else %}-amount{% endif %}" class="hover:text-purple-400 flex items-center gap-1">
+                                {% trans "Amount" %}
+                                {% if sort_by == '-amount' %}↓{% elif sort_by == 'amount' %}↑{% endif %}
+                            </a>
+                        </th>
+                        <th class="text-left py-3 px-4">{% trans "Method" %}</th>
+                        <th class="text-left py-3 px-4">{% trans "Status" %}</th>
+                        <th class="text-left py-3 px-4">
+                            <a href="?{% if search %}search={{ search }}&{% endif %}{% if status_filter %}status={{ status_filter }}&{% endif %}sort={% if sort_by == '-created_at' %}created_at{% else %}-created_at{% endif %}" class="hover:text-purple-400 flex items-center gap-1">
+                                {% trans "Date" %}
+                                {% if sort_by == '-created_at' %}↓{% elif sort_by == 'created_at' %}↑{% endif %}
+                            </a>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for transaction in transactions %}
+                    <tr class="border-b border-slate-800 hover:bg-slate-800/50">
+                        <td class="py-3 px-4">{{ transaction.transaction_id }}</td>
+                        <td class="py-3 px-4">{{ transaction.user.username }}</td>
+                        <td class="py-3 px-4">${{ transaction.amount|floatformat:2 }}</td>
+                        <td class="py-3 px-4">{{ transaction.get_method_display }}</td>
+                        <td class="py-3 px-4">
+                            <span class="px-2 py-1 rounded text-xs
+                                {% if transaction.status == 'completed' %}bg-green-900/50 text-green-400
+                                {% elif transaction.status == 'pending' %}bg-yellow-900/50 text-yellow-400
+                                {% else %}bg-red-900/50 text-red-400{% endif %}">
+                                {{ transaction.get_status_display }}
+                            </span>
+                        </td>
+                        <td class="py-3 px-4 text-sm text-gray-400">{{ transaction.created_at|date:"M d, Y H:i" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="py-8 text-center text-gray-400">{% trans "No transactions found" %}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
