@@ -9,7 +9,7 @@
 {% get_site_setting 'favicon' '' as favicon %}
 {% get_site_setting 'google_analytics_id' '' as google_analytics_id %}
 <!DOCTYPE html>
-<html lang="{{ CURRENT_LANGUAGE }}" class="dark">
+<html lang="{{ CURRENT_LANGUAGE }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -63,28 +63,119 @@
         }
         
         body {
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+            background: #ffffff;
             min-height: 100vh;
             position: relative;
             overflow-x: hidden;
         }
         
-        /* Animated background gradient */
-        body::before {
+        /* Split layout container */
+        .auth-split-container {
+            display: flex;
+            min-height: 100vh;
+        }
+        
+        /* Left promotional section */
+        .auth-left-section {
+            flex: 0 0 33.333%;
+            background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 50%, #7dd3fc 100%);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 3rem;
+        }
+        
+        .auth-left-section::before {
             content: '';
             position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(124, 58, 237, 0.1) 0%, transparent 50%);
-            animation: rotate 20s linear infinite;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 30%, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(147, 197, 253, 0.1) 0%, transparent 50%);
             z-index: 0;
         }
         
-        @keyframes rotate {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        .auth-left-content {
+            position: relative;
+            z-index: 1;
+        }
+        
+        /* Right form section */
+        .auth-right-section {
+            flex: 0 0 66.667%;
+            background: #ffffff;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 3rem 4rem;
+            position: relative;
+        }
+        
+        /* Illustration area */
+        .auth-illustration {
+            position: relative;
+            margin-top: 2rem;
+            height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .illustration-checkmark {
+            width: 120px;
+            height: 120px;
+            background: rgba(59, 130, 246, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            animation: pulse 3s ease-in-out infinite;
+        }
+        
+        .illustration-checkmark::before {
+            content: '✓';
+            font-size: 60px;
+            color: #3b82f6;
+            font-weight: bold;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.8; }
+            50% { transform: scale(1.1); opacity: 1; }
+        }
+        
+        .illustration-elements {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .illustration-icon {
+            position: absolute;
+            opacity: 0.6;
+        }
+        
+        /* Responsive design */
+        @media (max-width: 1024px) {
+            .auth-split-container {
+                flex-direction: column;
+            }
+            
+            .auth-left-section {
+                flex: 0 0 auto;
+                min-height: 40vh;
+            }
+            
+            .auth-right-section {
+                flex: 1;
+                padding: 2rem;
+            }
         }
         
         .gradient-purple {
@@ -100,6 +191,133 @@
             backdrop-filter: blur(20px);
             border: 1px solid rgba(148, 163, 184, 0.2);
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        
+        .auth-form-card {
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
+        
+        .auth-input {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            color: #1f2937;
+            background: #ffffff;
+            transition: all 0.2s;
+        }
+        
+        .auth-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
+        .auth-input::placeholder {
+            color: #9ca3af;
+        }
+        
+        .auth-btn-primary {
+            width: 100%;
+            padding: 0.875rem 1.5rem;
+            background: #3b82f6;
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .auth-btn-primary:hover {
+            background: #2563eb;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+        
+        .auth-link {
+            color: #3b82f6;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        
+        .auth-link:hover {
+            color: #2563eb;
+        }
+        
+        .auth-checkbox {
+            width: 18px;
+            height: 18px;
+            border: 2px solid #d1d5db;
+            border-radius: 4px;
+            cursor: pointer;
+            accent-color: #3b82f6;
+        }
+        
+        .divider {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            margin: 1.5rem 0;
+        }
+        
+        .divider::before,
+        .divider::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .divider span {
+            padding: 0 1rem;
+            color: #6b7280;
+            font-size: 0.875rem;
+        }
+        
+        .social-login {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 1.5rem;
+        }
+        
+        .social-login-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .social-login-item:hover {
+            transform: translateY(-2px);
+        }
+        
+        .social-login-icon {
+            width: 48px;
+            height: 48px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #ffffff;
+            transition: all 0.2s;
+        }
+        
+        .social-login-item:hover .social-login-icon {
+            border-color: #3b82f6;
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
+        }
+        
+        .social-login-label {
+            font-size: 0.75rem;
+            color: #6b7280;
         }
         
         .btn-primary {
@@ -171,7 +389,7 @@
     
     {% block extra_css %}{% endblock %}
 </head>
-<body class="text-gray-100">
+<body class="text-gray-800">
     <!-- Messages data for SweetAlert2 -->
     {% if messages %}
     <script id="messages-data" type="application/json">
@@ -192,20 +410,31 @@
     </div>
     
     <!-- Footer -->
-    <footer class="fixed bottom-0 left-0 right-0 py-4 z-10">
+    <footer class="auth-footer">
         <div class="max-w-7xl mx-auto px-4 text-center">
             <p class="text-sm text-gray-500">
                 &copy; {% now "Y" %} {{ site_name }}. {% trans "All rights reserved." %}
             </p>
-            <div class="mt-2 flex justify-center space-x-4 text-xs text-gray-500">
-                <a href="#" class="hover:text-purple-400 transition">{% trans "Privacy Policy" %}</a>
-                <span>•</span>
-                <a href="#" class="hover:text-purple-400 transition">{% trans "Terms of Service" %}</a>
-                <span>•</span>
-                <a href="#" class="hover:text-purple-400 transition">{% trans "Support" %}</a>
-            </div>
         </div>
     </footer>
+    
+    <style>
+        .auth-footer {
+            position: absolute;
+            bottom: 1rem;
+            right: 2rem;
+            z-index: 10;
+        }
+        
+        @media (max-width: 1024px) {
+            .auth-footer {
+                position: relative;
+                bottom: auto;
+                right: auto;
+                padding: 1rem;
+            }
+        }
+    </style>
     
     <script>
         // SweetAlert2 configuration for dark theme
