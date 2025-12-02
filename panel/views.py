@@ -1158,21 +1158,90 @@ def admin_services(request):
 @login_required
 @admin_required
 def admin_transactions(request):
-    transactions = Payment.objects.all().order_by('-created_at')
+    transactions = Payment.objects.all().select_related('user')
+    
+    # Search functionality
+    search = request.GET.get('search', '')
+    if search:
+        transactions = transactions.filter(
+            Q(transaction_id__icontains=search) |
+            Q(user__username__icontains=search) |
+            Q(user__email__icontains=search) |
+            Q(gateway_payment_id__icontains=search)
+        )
+    
+    # Status filter
+    status_filter = request.GET.get('status', '')
+    if status_filter:
+        transactions = transactions.filter(status=status_filter)
+    
+    # Sort functionality
+    sort_by = request.GET.get('sort', '-created_at')
+    valid_sort_fields = ['created_at', '-created_at', 'amount', '-amount', 'transaction_id', '-transaction_id', 'user__username', '-user__username']
+    if sort_by not in valid_sort_fields:
+        sort_by = '-created_at'
+    transactions = transactions.order_by(sort_by)
+    
+    # Apply slice after filtering and sorting (for display)
+    transactions_display = transactions[:200]
+    
+    context = {
+        'transactions': transactions_display,
+        'status_filter': status_filter,
+        'search': search,
+        'sort_by': sort_by,
+        'pending_tickets_count': Ticket.objects.filter(status__in=['open', 'in_progress']).count(),
+    }
+    return render(request, 'panel/admin/transactions.html', context)
+
+# Admin Transaction Logs Export
+@login_required
+@admin_required
+def admin_transactions_export(request):
+    transactions = Payment.objects.all().select_related('user')
+    
+    # Apply same filters as main view
+    search = request.GET.get('search', '')
+    if search:
+        transactions = transactions.filter(
+            Q(transaction_id__icontains=search) |
+            Q(user__username__icontains=search) |
+            Q(user__email__icontains=search) |
+            Q(gateway_payment_id__icontains=search)
+        )
     
     status_filter = request.GET.get('status', '')
     if status_filter:
         transactions = transactions.filter(status=status_filter)
     
-    # Apply slice after filtering
-    transactions = transactions[:200]
+    # Sort
+    sort_by = request.GET.get('sort', '-created_at')
+    valid_sort_fields = ['created_at', '-created_at', 'amount', '-amount', 'transaction_id', '-transaction_id', 'user__username', '-user__username']
+    if sort_by not in valid_sort_fields:
+        sort_by = '-created_at'
+    transactions = transactions.order_by(sort_by)
     
-    context = {
-        'transactions': transactions,
-        'status_filter': status_filter,
-        'pending_tickets_count': Ticket.objects.filter(status__in=['open', 'in_progress']).count(),
-    }
-    return render(request, 'panel/admin/transactions.html', context)
+    # Create CSV response
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="transactions_export.csv"'
+    
+    writer = csv.writer(response)
+    writer.writerow(['Transaction ID', 'User', 'Email', 'Amount', 'Method', 'Status', 'Created At', 'Completed At', 'Gateway Payment ID'])
+    
+    for transaction in transactions:
+        writer.writerow([
+            transaction.transaction_id,
+            transaction.user.username,
+            transaction.user.email,
+            f"${transaction.amount:.2f}",
+            transaction.get_method_display(),
+            transaction.get_status_display(),
+            transaction.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+            transaction.completed_at.strftime('%Y-%m-%d %H:%M:%S') if transaction.completed_at else '',
+            transaction.gateway_payment_id or '',
+        ])
+    
+    return response
 
 # Admin Categories Management
 @login_required

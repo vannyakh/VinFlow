@@ -35,6 +35,7 @@ urlpatterns = [
     path('admin/cancel/', views.admin_cancel, name='admin_cancel'),
     path('admin/services/', views.admin_services, name='admin_services'),
     path('admin/transactions/', views.admin_transactions, name='admin_transactions'),
+    path('admin/transactions/export/', views.admin_transactions_export, name='admin_transactions_export'),
     path('admin/categories/', views.admin_categories, name='admin_categories'),
     path('admin/settings/', views.admin_settings, name='admin_settings'),
     path('admin/tickets/', views.admin_tickets, name='admin_tickets'),
