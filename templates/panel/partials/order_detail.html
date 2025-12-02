@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% blocktrans with order_id=order.order_id %}Order {{ order_id }}{% endblocktrans %} - VinFlow{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+    <div class="flex justify-between items-center flex-wrap gap-4">
+        <div>
+            <h1 class="text-3xl font-bold">{% trans "Order Details" %}</h1>
+            <p class="text-gray-400 mt-1">{% trans "Order ID" %}: {{ order.order_id }}</p>
+        </div>
+        <div>
+            <a href="{% url 'orders' %}" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm">
+                {% trans "Back to Orders" %}
+            </a>
+        </div>
+    </div>
+    
+    <div class="card-glass rounded-xl p-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <p class="text-gray-400 text-sm">{% trans "Order ID" %}</p>
+                <p class="font-semibold">{{ order.order_id }}</p>
+            </div>
+            <div>
+                <p class="text-gray-400 text-sm">{% trans "Service" %}</p>
+                <p class="font-semibold">{{ order.service.name }}</p>
+            </div>
+            <div>
+                <p class="text-gray-400 text-sm">{% trans "Link" %}</p>
+                <a href="{{ order.link }}" target="_blank" class="text-cyan-400 hover:text-cyan-300 break-all">{{ order.link }}</a>
+            </div>
+            <div>
+                <p class="text-gray-400 text-sm">{% trans "Quantity" %}</p>
+                <p class="font-semibold">{{ order.quantity }}</p>
+            </div>
+            <div>
+                <p class="text-gray-400 text-sm">{% trans "Status" %}</p>
+                <span class="px-2 py-1 rounded text-xs
+                    {% if order.status == 'Completed' %}bg-green-900/50 text-green-400
+                    {% elif order.status == 'Processing' or order.status == 'In Progress' %}bg-yellow-900/50 text-yellow-400
+                    {% elif order.status == 'Pending' %}bg-blue-900/50 text-blue-400
+                    {% else %}bg-red-900/50 text-red-400{% endif %}">
+                    {{ order.status }}
+                </span>
+            </div>
+            <div>
+                <p class="text-gray-400 text-sm">{% trans "Charge" %}</p>
+                <p class="font-semibold text-cyan-400">${{ order.charge|floatformat:2 }}</p>
+            </div>
+            <div>
+                <p class="text-gray-400 text-sm">{% trans "Start Count" %}</p>
+                <p class="font-semibold">{{ order.start_count }}</p>
+            </div>
+            <div>
+                <p class="text-gray-400 text-sm">{% trans "Remains" %}</p>
+                <p class="font-semibold">{{ order.remains }}</p>
+            </div>
+            {% if order.drip_feed %}
+            <div>
+                <p class="text-gray-400 text-sm">{% trans "Drip-Feed" %}</p>
+                <p class="font-semibold">{{ order.drip_feed_quantity }}/{% trans "day" %} × {{ order.drip_feed_days }} {% trans "days" %}</p>
+            </div>
+            {% endif %}
+            <div>
+                <p class="text-gray-400 text-sm">{% trans "Created At" %}</p>
+                <p class="font-semibold">{{ order.created_at|date:"M d, Y H:i" }}</p>
+            </div>
+            {% if order.external_order_id %}
+            <div>
+                <p class="text-gray-400 text-sm">{% trans "External Order ID" %}</p>
+                <p class="font-semibold text-sm">{{ order.external_order_id }}</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    {% if order.status in 'Pending,Processing' %}
+    <div class="card-glass rounded-xl p-6">
+        <div class="flex mb-2 items-center gap-2">
+            <div class="spinner"></div>
+            <p class="text-gray-400">{% trans "Order status is being updated..." %}</p>
+        </div>
+        <div hx-get="{% url 'order_status' order.id %}" 
+             hx-trigger="every 10s" 
+             hx-target="#order-status" 
+             hx-swap="innerHTML"
+             class="htmx-indicator">
+        </div>
+        <div id="order-status">
+            {% include 'panel/partials/order_status.html' with order=order %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

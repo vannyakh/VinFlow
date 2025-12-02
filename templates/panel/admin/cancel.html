@@ -1,0 +1,42 @@
+{% extends 'panel/admin/base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Cancel Orders" %} - VinFlow{% endblock %}
+
+{% block admin_content %}
+<div class="space-y-6">
+    <h1 class="text-3xl font-bold">{% trans "Canceled Orders" %}</h1>
+    
+    <div class="card-glass rounded-xl p-6">
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="border-b border-slate-700">
+                        <th class="text-left py-3 px-4">{% trans "Order ID" %}</th>
+                        <th class="text-left py-3 px-4">{% trans "User" %}</th>
+                        <th class="text-left py-3 px-4">{% trans "Service" %}</th>
+                        <th class="text-left py-3 px-4">{% trans "Charge" %}</th>
+                        <th class="text-left py-3 px-4">{% trans "Canceled At" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in canceled_orders %}
+                    <tr class="border-b border-slate-800 hover:bg-slate-800/50">
+                        <td class="py-3 px-4">{{ order.order_id }}</td>
+                        <td class="py-3 px-4">{{ order.user.username }}</td>
+                        <td class="py-3 px-4">{{ order.service.name }}</td>
+                        <td class="py-3 px-4">${{ order.charge|floatformat:2 }}</td>
+                        <td class="py-3 px-4 text-sm text-gray-400">{{ order.updated_at|date:"M d, Y H:i" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="py-8 text-center text-gray-400">{% trans "No canceled orders" %}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
