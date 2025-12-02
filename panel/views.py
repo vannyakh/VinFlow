@@ -4,6 +4,8 @@ import os
 import json
 from django.conf import settings as django_settings
 from django.contrib.auth import login, authenticate
+import urllib.parse
+from django.core.files.base import ContentFile
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.contrib.auth.models import User
@@ -289,6 +291,191 @@ def user_login(request):
                 messages.error(request, 'Invalid username or password. Please try again.')
     
     return render(request, 'auth/login.html')
+
+# Google OAuth Login
+def google_login(request):
+    """Initiate Google OAuth login flow"""
+    if request.user.is_authenticated:
+        return redirect('dashboard')
+    
+    from django.conf import settings
+    
+    # Check if Google OAuth is configured
+    if not settings.GOOGLE_OAUTH2_CLIENT_ID:
+        messages.error(request, 'Google OAuth is not configured. Please contact administrator.')
+        return redirect('login')
+    
+    # Generate state token for CSRF protection
+    import secrets
+    state = secrets.token_urlsafe(32)
+    request.session['google_oauth_state'] = state
+    request.session['google_oauth_next'] = request.GET.get('next', 'dashboard')
+    
+    # Build Google OAuth URL
+    params = {
+        'client_id': settings.GOOGLE_OAUTH2_CLIENT_ID,
+        'redirect_uri': settings.GOOGLE_OAUTH2_REDIRECT_URI,
+        'response_type': 'code',
+        'scope': 'openid email profile',
+        'state': state,
+        'access_type': 'offline',
+        'prompt': 'consent',
+    }
+    
+    auth_url = 'https://accounts.google.com/o/oauth2/v2/auth?' + urllib.parse.urlencode(params)
+    return redirect(auth_url)
+
+# Google OAuth Callback
+def google_callback(request):
+    """Handle Google OAuth callback"""
+    if request.user.is_authenticated:
+        return redirect('dashboard')
+    
+    from django.conf import settings
+    
+    # Verify state token
+    state = request.GET.get('state')
+    if not state or state != request.session.get('google_oauth_state'):
+        messages.error(request, 'Invalid OAuth state. Please try again.')
+        return redirect('login')
+    
+    # Get authorization code
+    code = request.GET.get('code')
+    if not code:
+        error = request.GET.get('error', 'Unknown error')
+        messages.error(request, f'Google authentication failed: {error}')
+        return redirect('login')
+    
+    # Exchange code for access token
+    token_url = 'https://oauth2.googleapis.com/token'
+    token_data = {
+        'code': code,
+        'client_id': settings.GOOGLE_OAUTH2_CLIENT_ID,
+        'client_secret': settings.GOOGLE_OAUTH2_CLIENT_SECRET,
+        'redirect_uri': settings.GOOGLE_OAUTH2_REDIRECT_URI,
+        'grant_type': 'authorization_code',
+    }
+    
+    try:
+        token_response = requests.post(token_url, data=token_data)
+        token_response.raise_for_status()
+        token_json = token_response.json()
+        access_token = token_json.get('access_token')
+        
+        if not access_token:
+            messages.error(request, 'Failed to get access token from Google.')
+            return redirect('login')
+        
+        # Get user info from Google
+        user_info_url = 'https://www.googleapis.com/oauth2/v2/userinfo'
+        headers = {'Authorization': f'Bearer {access_token}'}
+        user_info_response = requests.get(user_info_url, headers=headers)
+        user_info_response.raise_for_status()
+        user_info = user_info_response.json()
+        
+        # Extract user information
+        google_id = user_info.get('id')
+        email = user_info.get('email')
+        first_name = user_info.get('given_name', '')
+        last_name = user_info.get('family_name', '')
+        full_name = user_info.get('name', '')
+        picture = user_info.get('picture', '')
+        
+        if not email:
+            messages.error(request, 'Unable to get email from Google account.')
+            return redirect('login')
+        
+        # Check if user exists by email
+        try:
+            user = User.objects.get(email=email)
+            # User exists, log them in
+            if not user.is_active:
+                messages.error(request, 'Your account has been disabled. Please contact support.')
+                return redirect('login')
+        except User.DoesNotExist:
+            # Create new user
+            # Generate username from email or use full name
+            username_base = email.split('@')[0]
+            username = username_base
+            counter = 1
+            while User.objects.filter(username=username).exists():
+                username = f"{username_base}{counter}"
+                counter += 1
+            
+            # Create user
+            user = User.objects.create_user(
+                username=username,
+                email=email,
+                first_name=first_name,
+                last_name=last_name,
+            )
+            user.set_unusable_password()  # No password needed for OAuth users
+            user.save()
+        
+        # Ensure profile exists
+        default_role = 'admin' if user.is_superuser else 'user'
+        profile, created = UserProfile.objects.get_or_create(
+            user=user,
+            defaults={'role': default_role}
+        )
+        
+        # Update profile with Google info if available
+        if picture and not profile.avatar:
+            try:
+                # Download and save avatar
+                img_response = requests.get(picture)
+                if img_response.status_code == 200:
+                    img_name = f"avatars/google_{user.id}_{google_id}.jpg"
+                    profile.avatar.save(img_name, ContentFile(img_response.content), save=False)
+            except Exception:
+                pass  # Ignore avatar download errors
+        
+        # Update user name if not set
+        if not user.first_name and first_name:
+            user.first_name = first_name
+        if not user.last_name and last_name:
+            user.last_name = last_name
+        if user.first_name or user.last_name:
+            user.save()
+        
+        # Check if 2FA is enabled
+        if profile.two_factor_enabled:
+            request.session['2fa_user_id'] = user.id
+            request.session['2fa_verified'] = False
+            # Clear OAuth state
+            if 'google_oauth_state' in request.session:
+                del request.session['google_oauth_state']
+            return redirect('verify_2fa')
+        else:
+            # Log the user in
+            login(request, user)
+            
+            # Set language from user profile
+            try:
+                if profile.language:
+                    translation.activate(profile.language)
+                    request.session['django_language'] = profile.language
+            except:
+                pass
+            
+            messages.success(request, f'Welcome, {user.get_full_name() or user.username}!')
+            
+            # Clear OAuth state
+            if 'google_oauth_state' in request.session:
+                del request.session['google_oauth_state']
+            
+            # Redirect to next URL or dashboard
+            next_url = request.session.get('google_oauth_next', 'dashboard')
+            if 'google_oauth_next' in request.session:
+                del request.session['google_oauth_next']
+            return redirect(next_url)
+    
+    except requests.exceptions.RequestException as e:
+        messages.error(request, f'Error communicating with Google: {str(e)}')
+        return redirect('login')
+    except Exception as e:
+        messages.error(request, f'An error occurred during Google authentication: {str(e)}')
+        return redirect('login')
 
 # Dashboard
 @login_required

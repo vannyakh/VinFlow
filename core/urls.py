@@ -19,7 +19,7 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from django.conf.urls.i18n import i18n_patterns
-from panel.views import set_language, user_login, register, user_logout
+from panel.views import set_language, user_login, register, user_logout, google_login, google_callback
 
 urlpatterns = [
     path('django-admin/', admin.site.urls),  # Django admin at /django-admin/ to avoid conflict with custom admin
@@ -35,6 +35,12 @@ urlpatterns += i18n_patterns(
     path('logout/', user_logout, name='logout'),
     prefix_default_language=False,  # Don't prefix default language
 )
+
+# Google OAuth URLs (no language prefix)
+urlpatterns += [
+    path('auth/google/', google_login, name='google_login'),
+    path('auth/google/callback/', google_callback, name='google_callback'),
+]
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

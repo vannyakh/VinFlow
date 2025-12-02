@@ -214,3 +214,8 @@ KHQR_API_URL = os.getenv('KHQR_API_URL', 'https://api-bakong.nbc.gov.kh')
 KHQR_MERCHANT_ID = os.getenv('KHQR_MERCHANT_ID', '')
 KHQR_API_KEY = os.getenv('KHQR_API_KEY', '')
 KHQR_CALLBACK_URL = os.getenv('KHQR_CALLBACK_URL', 'http://localhost:8000/panel/payment/khqr/callback/')
+
+# Google OAuth Settings
+GOOGLE_OAUTH2_CLIENT_ID = os.getenv('GOOGLE_OAUTH2_CLIENT_ID', '')
+GOOGLE_OAUTH2_CLIENT_SECRET = os.getenv('GOOGLE_OAUTH2_CLIENT_SECRET', '')
+GOOGLE_OAUTH2_REDIRECT_URI = os.getenv('GOOGLE_OAUTH2_REDIRECT_URI', 'http://localhost:8000/auth/google/callback/')
