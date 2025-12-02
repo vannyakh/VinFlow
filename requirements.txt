@@ -10,4 +10,5 @@ pyotp>=2.9.0
 qrcode[pil]>=7.4.2
 stripe>=7.0.0
 paypalrestsdk>=1.13.3
+python-dotenv>=1.0.0
 
