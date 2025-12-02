@@ -39,6 +39,7 @@ urlpatterns = [
     path('admin/settings/', views.admin_settings, name='admin_settings'),
     path('admin/tickets/', views.admin_tickets, name='admin_tickets'),
     path('admin/users/', views.admin_users, name='admin_users'),
+    path('admin/users/<int:user_id>/edit/', views.admin_edit_user, name='admin_edit_user'),
     path('admin/users/<int:user_id>/edit-role/', views.admin_edit_user_role, name='admin_edit_user_role'),
     path('admin/users/<int:user_id>/assign-group/', views.admin_assign_user_group, name='admin_assign_user_group'),
     path('admin/user-groups/', views.admin_user_groups, name='admin_user_groups'),
@@ -48,6 +49,9 @@ urlpatterns = [
     path('admin/blacklist/link/', views.admin_blacklist_link, name='admin_blacklist_link'),
     path('admin/blacklist/email/', views.admin_blacklist_email, name='admin_blacklist_email'),
     path('admin/blog/', views.admin_blog, name='admin_blog'),
+    path('admin/notifications/', views.admin_notifications, name='admin_notifications'),
+    path('admin/notifications/<int:notification_id>/mark-read/', views.admin_mark_notification_read, name='admin_mark_notification_read'),
+    path('admin/notifications/create/', views.admin_create_notification, name='admin_create_notification'),
     
     # 2FA Routes
     path('verify-2fa/', views.verify_2fa, name='verify_2fa'),

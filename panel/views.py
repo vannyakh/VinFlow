@@ -31,7 +31,7 @@ from .models import (
     UserProfile, Service, ServiceCategory, Order, SubscriptionPackage,
     UserSubscription, Coupon, Payment, Ticket, TicketMessage,
     AffiliateCommission, BlogPost, BlacklistIP, BlacklistLink, BlacklistEmail,
-    SystemSetting
+    SystemSetting, Notification
 )
 
 # Create UserProfile on user creation
@@ -1469,6 +1469,115 @@ def admin_users(request):
     }
     return render(request, 'panel/admin/users.html', context)
 
+# Admin Edit User (AJAX endpoint)
+@login_required
+@admin_required
+def admin_edit_user(request, user_id):
+    from django.contrib.auth.models import Group
+    
+    user = get_object_or_404(User, id=user_id)
+    
+    if request.method == 'GET':
+        # Ensure user has a profile
+        profile = ensure_user_profile(user)
+        
+        # Return user data as JSON
+        user_groups = list(user.groups.values_list('id', flat=True))
+        return JsonResponse({
+            'id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'is_active': user.is_active,
+            'is_superuser': user.is_superuser,
+            'role': profile.role,
+            'balance': str(profile.balance),
+            'total_spent': str(profile.total_spent),
+            'groups': user_groups,
+            'date_joined': user.date_joined.isoformat() if user.date_joined else None,
+        })
+    
+    elif request.method == 'POST':
+        # Update user data
+        try:
+            # Get form data
+            username = request.POST.get('username', '').strip()
+            email = request.POST.get('email', '').strip()
+            first_name = request.POST.get('first_name', '').strip()
+            last_name = request.POST.get('last_name', '').strip()
+            role = request.POST.get('role', '').strip()
+            balance = request.POST.get('balance', '').strip()
+            total_spent = request.POST.get('total_spent', '').strip()
+            is_active = request.POST.get('is_active') == 'true'
+            selected_groups = request.POST.getlist('groups')
+            
+            # Validation
+            if not username or not email:
+                return JsonResponse({'status': 'error', 'message': 'Username and email are required'}, status=400)
+            
+            # Check if username/email already exists (excluding current user)
+            if User.objects.filter(username=username).exclude(id=user.id).exists():
+                return JsonResponse({'status': 'error', 'message': 'Username already exists'}, status=400)
+            
+            if User.objects.filter(email=email).exclude(id=user.id).exists():
+                return JsonResponse({'status': 'error', 'message': 'Email already exists'}, status=400)
+            
+            # Validate email format
+            try:
+                validate_email(email)
+            except ValidationError:
+                return JsonResponse({'status': 'error', 'message': 'Invalid email format'}, status=400)
+            
+            # Prevent admin from removing their own admin role
+            if user.id == request.user.id and role != 'admin':
+                return JsonResponse({'status': 'error', 'message': 'You cannot remove your own admin role'}, status=400)
+            
+            # Update user fields
+            user.username = username
+            user.email = email
+            user.first_name = first_name
+            user.last_name = last_name
+            user.is_active = is_active
+            user.save()
+            
+            # Ensure user has a profile and update it
+            profile = ensure_user_profile(user)
+            if role in ['admin', 'reseller', 'user']:
+                profile.role = role
+            
+            try:
+                if balance:
+                    profile.balance = float(balance)
+            except (ValueError, TypeError):
+                pass
+            
+            try:
+                if total_spent:
+                    profile.total_spent = float(total_spent)
+            except (ValueError, TypeError):
+                pass
+            
+            profile.save()
+            
+            # Update groups
+            if selected_groups:
+                selected_group_ids = [int(gid) for gid in selected_groups if gid.isdigit()]
+                groups = Group.objects.filter(id__in=selected_group_ids)
+                user.groups.set(groups)
+            else:
+                user.groups.clear()
+            
+            return JsonResponse({
+                'status': 'success',
+                'message': f'User {user.username} updated successfully'
+            })
+            
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+    
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
+
 # Admin Edit User Role
 @login_required
 @admin_required
@@ -1738,6 +1847,110 @@ def admin_blog(request):
         'pending_tickets_count': Ticket.objects.filter(status__in=['open', 'in_progress']).count(),
     }
     return render(request, 'panel/admin/blog.html', context)
+
+# Admin Notifications Management
+@login_required
+@admin_required
+def admin_notifications(request):
+    notifications = Notification.objects.filter(user=request.user).order_by('-created_at')
+    
+    # Filter by read status
+    filter_status = request.GET.get('filter', '')
+    if filter_status == 'unread':
+        notifications = notifications.filter(is_read=False)
+    elif filter_status == 'read':
+        notifications = notifications.filter(is_read=True)
+    
+    # Get unread count
+    unread_count = Notification.objects.filter(user=request.user, is_read=False).count()
+    
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        
+        if action == 'mark_all_read':
+            Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
+            messages.success(request, 'All notifications marked as read')
+            return redirect('admin_notifications')
+        elif action == 'delete':
+            notification_id = request.POST.get('notification_id')
+            try:
+                notification = Notification.objects.get(id=notification_id, user=request.user)
+                notification.delete()
+                messages.success(request, 'Notification deleted')
+            except Notification.DoesNotExist:
+                messages.error(request, 'Notification not found')
+            return redirect('admin_notifications')
+        elif action == 'delete_all_read':
+            Notification.objects.filter(user=request.user, is_read=True).delete()
+            messages.success(request, 'All read notifications deleted')
+            return redirect('admin_notifications')
+    
+    context = {
+        'notifications': notifications,
+        'unread_count': unread_count,
+        'filter_status': filter_status,
+        'pending_tickets_count': Ticket.objects.filter(status__in=['open', 'in_progress']).count(),
+    }
+    return render(request, 'panel/admin/notifications.html', context)
+
+# Mark notification as read (AJAX)
+@login_required
+@admin_required
+@require_http_methods(["POST"])
+def admin_mark_notification_read(request, notification_id):
+    try:
+        notification = Notification.objects.get(id=notification_id, user=request.user)
+        notification.is_read = True
+        notification.save()
+        return JsonResponse({'status': 'success'})
+    except Notification.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Notification not found'}, status=404)
+
+# Create notification (for admin use)
+@login_required
+@admin_required
+@require_http_methods(["POST"])
+def admin_create_notification(request):
+    title = request.POST.get('title', '').strip()
+    message = request.POST.get('message', '').strip()
+    notification_type = request.POST.get('notification_type', 'system')
+    link = request.POST.get('link', '').strip()
+    user_id = request.POST.get('user_id', '').strip()
+    
+    if not title or not message:
+        messages.error(request, 'Title and message are required')
+        return redirect('admin_notifications')
+    
+    # Create notification for specific user or all admins
+    if user_id:
+        try:
+            target_user = User.objects.get(id=user_id)
+            Notification.objects.create(
+                user=target_user,
+                title=title,
+                message=message,
+                notification_type=notification_type,
+                link=link if link else None
+            )
+            messages.success(request, f'Notification sent to {target_user.username}')
+        except User.DoesNotExist:
+            messages.error(request, 'User not found')
+    else:
+        # Send to all admins
+        admin_users = User.objects.filter(
+            Q(profile__role='admin') | Q(is_superuser=True)
+        ).distinct()
+        for admin_user in admin_users:
+            Notification.objects.create(
+                user=admin_user,
+                title=title,
+                message=message,
+                notification_type=notification_type,
+                link=link if link else None
+            )
+        messages.success(request, f'Notification sent to all admins')
+    
+    return redirect('admin_notifications')
 
 # Add Funds
 @login_required
