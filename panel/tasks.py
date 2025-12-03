@@ -54,27 +54,13 @@ def place_order_to_supplier(order_id):
         order = Order.objects.get(id=order_id)
         service = order.service
         
-        # Determine supplier API endpoint and key from settings
-        supplier_config = {
-            'jap': {
-                'url': get_setting('supplier_jap_url', 'https://justanotherpanel.com/api/v2'),
-                'key': get_setting('supplier_jap_key', getattr(settings, 'JAP_API_KEY', '')),
-            },
-            'peakerr': {
-                'url': get_setting('supplier_peakerr_url', 'https://peakerr.com/api/v2'),
-                'key': get_setting('supplier_peakerr_key', getattr(settings, 'PEAKERR_API_KEY', '')),
-            },
-            'smmkings': {
-                'url': get_setting('supplier_smmkings_url', 'https://smmkings.com/api/v2'),
-                'key': get_setting('supplier_smmkings_key', getattr(settings, 'SMMKINGS_API_KEY', '')),
-            },
-        }
+        # JAP API configuration
+        jap_url = get_setting('supplier_jap_url', 'https://justanotherpanel.com/api/v2')
+        jap_key = get_setting('supplier_jap_key', getattr(settings, 'JAP_API_KEY', ''))
         
-        config = supplier_config.get(service.supplier_api, supplier_config['jap'])
-        
-        # Build payload based on supplier
+        # Build payload for JAP API
         payload = {
-            'key': config['key'],
+            'key': jap_key,
             'action': 'add',
             'service': service.external_service_id or service.id,
             'link': order.link,
@@ -95,7 +81,7 @@ def place_order_to_supplier(order_id):
         data = {}
         for attempt in range(retry_attempts):
             try:
-                response = requests.post(config['url'], data=payload, timeout=timeout)
+                response = requests.post(jap_url, data=payload, timeout=timeout)
                 data = response.json()
                 
                 if response.status_code == 200 and 'order' in data:
@@ -136,32 +122,19 @@ def place_order_to_supplier(order_id):
 
 @shared_task
 def sync_order_status(order_id):
-    """Sync order status from supplier"""
+    """Sync order status from JAP API"""
     from .models import Order
     try:
         order = Order.objects.get(id=order_id)
         if not order.external_order_id:
             return
         
-        supplier_config = {
-            'jap': {
-                'url': get_setting('supplier_jap_url', 'https://justanotherpanel.com/api/v2'),
-                'key': get_setting('supplier_jap_key', getattr(settings, 'JAP_API_KEY', '')),
-            },
-            'peakerr': {
-                'url': get_setting('supplier_peakerr_url', 'https://peakerr.com/api/v2'),
-                'key': get_setting('supplier_peakerr_key', getattr(settings, 'PEAKERR_API_KEY', '')),
-            },
-            'smmkings': {
-                'url': get_setting('supplier_smmkings_url', 'https://smmkings.com/api/v2'),
-                'key': get_setting('supplier_smmkings_key', getattr(settings, 'SMMKINGS_API_KEY', '')),
-            },
-        }
-        
-        config = supplier_config.get(order.service.supplier_api, supplier_config['jap'])
+        # JAP API configuration
+        jap_url = get_setting('supplier_jap_url', 'https://justanotherpanel.com/api/v2')
+        jap_key = get_setting('supplier_jap_key', getattr(settings, 'JAP_API_KEY', ''))
         
         payload = {
-            'key': config['key'],
+            'key': jap_key,
             'action': 'status',
             'order': order.external_order_id,
         }
@@ -175,7 +148,7 @@ def sync_order_status(order_id):
         # Get timeout from settings
         timeout = int(get_setting('supplier_timeout', '30'))
         
-        response = requests.post(config['url'], data=payload, timeout=timeout)
+        response = requests.post(jap_url, data=payload, timeout=timeout)
         data = response.json()
         
         if response.status_code == 200:
@@ -232,43 +205,31 @@ def process_subscription_delivery():
         subscription.save()
 
 @shared_task
-def sync_services_from_supplier(supplier='jap'):
-    """Sync services from supplier API (JAP, Peakerr, etc.) - Celery task version"""
+def sync_services_from_supplier():
+    """Sync services from JAP API - Celery task version"""
     from .models import Service, ServiceCategory
     from decimal import Decimal, InvalidOperation
     
-    supplier_config = {
-        'jap': {
-            'url': get_setting('supplier_jap_url', 'https://justanotherpanel.com/api/v2'),
-            'key': get_setting('supplier_jap_key', getattr(settings, 'JAP_API_KEY', '')),
-        },
-        'peakerr': {
-            'url': get_setting('supplier_peakerr_url', 'https://peakerr.com/api/v2'),
-            'key': get_setting('supplier_peakerr_key', getattr(settings, 'PEAKERR_API_KEY', '')),
-        },
-        'smmkings': {
-            'url': get_setting('supplier_smmkings_url', 'https://smmkings.com/api/v2'),
-            'key': get_setting('supplier_smmkings_key', getattr(settings, 'SMMKINGS_API_KEY', '')),
-        },
-    }
+    # JAP API configuration
+    jap_url = get_setting('supplier_jap_url', 'https://justanotherpanel.com/api/v2')
+    jap_key = get_setting('supplier_jap_key', getattr(settings, 'JAP_API_KEY', ''))
     
-    config = supplier_config.get(supplier)
-    if not config or not config['key']:
-        logger.error(f'{supplier.upper()} API key not configured')
-        return {'status': 'error', 'message': f'{supplier.upper()} API key not configured'}
+    if not jap_key:
+        logger.error('JAP API key not configured')
+        return {'status': 'error', 'message': 'JAP API key not configured'}
     
     try:
-        # Fetch services from supplier API
+        # Fetch services from JAP API
         payload = {
-            'key': config['key'],
+            'key': jap_key,
             'action': 'services',
         }
         
         timeout = int(get_setting('supplier_timeout', '30'))
-        response = requests.post(config['url'], data=payload, timeout=timeout)
+        response = requests.post(jap_url, data=payload, timeout=timeout)
         
         if response.status_code != 200:
-            error_msg = f'Failed to fetch services from {supplier.upper()}: HTTP {response.status_code}'
+            error_msg = f'Failed to fetch services from JAP API: HTTP {response.status_code}'
             logger.error(error_msg)
             return {'status': 'error', 'message': error_msg}
         
@@ -285,13 +246,13 @@ def sync_services_from_supplier(supplier='jap'):
         elif isinstance(data, list):
             services_data = data
         else:
-            error_msg = f'Unexpected response format from {supplier.upper()} API'
+            error_msg = f'Unexpected response format from JAP API'
             logger.error(error_msg)
             return {'status': 'error', 'message': error_msg}
         
         if not services_data:
-            logger.warning(f'No services found from {supplier.upper()} API')
-            return {'status': 'warning', 'message': f'No services found from {supplier.upper()} API', 'synced': 0, 'created': 0, 'updated': 0}
+            logger.warning(f'No services found from JAP API')
+            return {'status': 'warning', 'message': f'No services found from JAP API', 'synced': 0, 'created': 0, 'updated': 0}
         
         # Category mapping from supplier categories to local categories
         category_mapping = {
@@ -344,19 +305,19 @@ def sync_services_from_supplier(supplier='jap'):
                 
                 # Try to find existing service by external_service_id first
                 try:
-                    service = Service.objects.get(external_service_id=service_id, supplier_api=supplier)
+                    service = Service.objects.get(external_service_id=service_id, supplier_api='jap')
                     created = False
                 except Service.DoesNotExist:
                     # If not found, try to find by name and supplier
                     try:
-                        service = Service.objects.get(name=name, supplier_api=supplier)
+                        service = Service.objects.get(name=name, supplier_api='jap')
                         service.external_service_id = service_id
                         created = False
                     except Service.DoesNotExist:
                         # Create new service
                         service = Service(
                             external_service_id=service_id,
-                            supplier_api=supplier,
+                            supplier_api='jap',
                             name=name,
                             category=category,
                             service_type=service_type,
@@ -377,7 +338,7 @@ def sync_services_from_supplier(supplier='jap'):
                     service.min_order = min_order
                     service.max_order = max_order
                     service.description = description
-                    service.supplier_api = supplier
+                    service.supplier_api = 'jap'
                     service.external_service_id = service_id
                     service.save()
                     updated_count += 1
@@ -394,7 +355,7 @@ def sync_services_from_supplier(supplier='jap'):
         
         result = {
             'status': 'success',
-            'message': f'Successfully synced {synced_count} services from {supplier.upper()}',
+            'message': f'Successfully synced {synced_count} services from JAP API',
             'synced': synced_count,
             'created': created_count,
             'updated': updated_count,
@@ -404,7 +365,7 @@ def sync_services_from_supplier(supplier='jap'):
         return result
         
     except requests.exceptions.RequestException as e:
-        error_msg = f'Network error connecting to {supplier.upper()} API: {str(e)}'
+        error_msg = f'Network error connecting to JAP API: {str(e)}'
         logger.error(error_msg)
         return {'status': 'error', 'message': error_msg}
     except Exception as e:

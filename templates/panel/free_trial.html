@@ -15,17 +15,70 @@
         <h1 class="text-3xl font-bold mb-2">{% trans "Free 100 Likes" %}</h1>
         <p class="text-gray-400 mb-6">{% trans "Get 100 free likes for new users" %}</p>
         
-        <form method="post" class="space-y-4">
+        {% if has_used_trial %}
+        <div class="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 mb-4">
+            <p class="text-yellow-500 text-sm">
+                <svg class="w-5 h-5 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                </svg>
+                {% trans "You have already used your free trial" %}
+            </p>
+        </div>
+        {% endif %}
+        
+        <form method="post" class="space-y-4" id="freeTrialForm">
             {% csrf_token %}
             <div>
                 <label class="block text-sm font-medium mb-2 text-left">{% trans "Link" %} *</label>
-                <input type="url" name="link" required placeholder="https://instagram.com/p/..." class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 focus:border-cyan-500 focus:outline-none">
+                <input type="url" name="link" id="linkInput" required placeholder="https://instagram.com/p/..." class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 focus:border-cyan-500 focus:outline-none" {% if has_used_trial %}disabled{% endif %}>
             </div>
             
-            <button type="submit" class="w-full gradient-cyan rounded-lg px-6 py-3 font-semibold hover:opacity-90 transition">
-                {% trans "Claim Free Trial Now" %}
+            <button type="submit" id="submitBtn" class="w-full rounded-lg px-6 py-3 font-semibold transition {% if has_used_trial %}bg-gray-600 cursor-not-allowed opacity-50{% else %}gradient-cyan hover:opacity-90{% endif %}" {% if has_used_trial %}disabled{% endif %}>
+                <span id="btnText">
+                    {% if has_used_trial %}
+                        {% trans "Already Used" %}
+                    {% else %}
+                        {% trans "Claim Free Trial Now" %}
+                    {% endif %}
+                </span>
+                <span id="btnLoading" class="hidden">
+                    <svg class="animate-spin h-5 w-5 inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    {% trans "Processing..." %}
+                </span>
             </button>
         </form>
+        
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const form = document.getElementById('freeTrialForm');
+                const submitBtn = document.getElementById('submitBtn');
+                const btnText = document.getElementById('btnText');
+                const btnLoading = document.getElementById('btnLoading');
+                const linkInput = document.getElementById('linkInput');
+                
+                form.addEventListener('submit', function(e) {
+                    // Show loading state
+                    btnText.classList.add('hidden');
+                    btnLoading.classList.remove('hidden');
+                    submitBtn.disabled = true;
+                    linkInput.disabled = true;
+                    
+                    // Optional: Add a timeout fallback in case of network issues
+                    setTimeout(function() {
+                        if (btnLoading.classList.contains('hidden') === false) {
+                            // Re-enable if still loading after 30 seconds
+                            btnText.classList.remove('hidden');
+                            btnLoading.classList.add('hidden');
+                            submitBtn.disabled = false;
+                            linkInput.disabled = false;
+                        }
+                    }, 30000);
+                });
+            });
+        </script>
         
         <p class="text-xs text-gray-500 mt-4">{% trans "One time only per account" %}</p>
     </div>

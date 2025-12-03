@@ -313,6 +313,34 @@ msgstr "បង្កើតគណនី"
 msgid "Already have an account?"
 msgstr "មានគណនីរួចហើយ?"
 
+#: templates/panel/free_trial.html:4
+msgid "Free 100 Likes"
+msgstr "ទទួលបាន 100 Likes ឥតគិតថ្លៃ"
+
+#: templates/panel/free_trial.html:16
+msgid "Get 100 free likes for new users"
+msgstr "ទទួលបាន 100 likes ឥតគិតថ្លៃ សម្រាប់អ្នកប្រើថ្មី"
+
+#: templates/panel/free_trial.html:23
+msgid "You have already used your free trial"
+msgstr "អ្នកបានប្រើការសាកល្បងឥតគិតថ្លៃរបស់អ្នករួចហើយ"
+
+#: templates/panel/free_trial.html:21
+msgid "Link"
+msgstr "តំណភ្ជាប់"
+
+#: templates/panel/free_trial.html:26
+msgid "Claim Free Trial Now"
+msgstr "ទាមទារការសាកល្បងឥតគិតថ្លៃឥឡូវនេះ"
+
+#: templates/panel/free_trial.html:26
+msgid "Already Used"
+msgstr "បានប្រើរួចហើយ"
+
+#: templates/panel/free_trial.html:30
+msgid "One time only per account"
+msgstr "តែមួយដងប៉ុណ្ណោះក្នុងមួយគណនី"
+
 #~ msgid "Welcome to VinFlow"
 #~ msgstr "សូមស្វាគមន៍មកកាន់ VinFlow"
 
