@@ -17,7 +17,7 @@ NC='\033[0m' # No Color
 PROJECT_NAME="vinflow"
 PROJECT_DIR="/var/www/${PROJECT_NAME}"
 VENV_DIR="${PROJECT_DIR}/venv"
-GIT_REPO="https://github.com/yourusername/vinflow.git"  # Update this
+GIT_REPO="https://github.com/vannyakh/vinflow.git"  # Update this
 BRANCH="main"
 
 # Print colored message
