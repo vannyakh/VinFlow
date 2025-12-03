@@ -553,6 +553,23 @@ def services(request):
     }
     return render(request, 'panel/services.html', context)
 
+# New Order Page
+@login_required
+def new_order(request):
+    """Modern order creation page with platform selection and real-time filtering"""
+    categories = ServiceCategory.objects.filter(is_active=True).order_by('order')
+    services = Service.objects.filter(is_active=True).select_related('category').order_by('category', 'name')
+    
+    # Check if user language is Khmer
+    is_khmer = request.user.profile.language == 'km' if hasattr(request.user, 'profile') else False
+    
+    context = {
+        'categories': categories,
+        'services': services,
+        'is_khmer': is_khmer,
+    }
+    return render(request, 'panel/new_order.html', context)
+
 # Create Order
 @login_required
 @require_http_methods(["POST"])
