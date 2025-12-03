@@ -1,0 +1,11 @@
+# Don't commit production environment file
+env.production
+
+# Don't commit local deployment scripts with credentials
+local_deploy.sh
+
+# Don't commit backup files
+*.sql
+*.sql.gz
+*.dump
+

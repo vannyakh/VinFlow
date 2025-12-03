@@ -1,0 +1,44 @@
+[Unit]
+Description=Celery Beat scheduler for VinFlow Django application
+After=network.target redis.service
+
+[Service]
+Type=simple
+# User and group to run as
+User=www-data
+Group=www-data
+
+# Working directory
+WorkingDirectory=/var/www/vinflow
+
+# Environment variables
+Environment="PATH=/var/www/vinflow/venv/bin"
+EnvironmentFile=/var/www/vinflow/.env
+
+# Celery beat command
+ExecStart=/var/www/vinflow/venv/bin/celery -A core beat \
+    --loglevel=info \
+    --logfile=/var/log/vinflow/celery-beat.log \
+    --pidfile=/var/run/vinflow/celery-beat.pid \
+    --schedule=/var/www/vinflow/celerybeat-schedule
+
+# Restart policy
+Restart=always
+RestartSec=10
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=vinflow-celerybeat
+
+# Create runtime directory
+RuntimeDirectory=vinflow
+RuntimeDirectoryMode=0755
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
+

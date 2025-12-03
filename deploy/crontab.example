@@ -1,0 +1,25 @@
+# VinFlow Crontab Configuration
+# Copy these entries to your crontab: crontab -e
+
+# Daily database backup at 2 AM
+0 2 * * * /var/www/vinflow/deploy/backup.sh >> /var/log/vinflow/backup.log 2>&1
+
+# System health check every 15 minutes
+*/15 * * * * /var/www/vinflow/deploy/monitor.sh >> /var/log/vinflow/monitor.log 2>&1
+
+# Clean up old Django sessions weekly (Sunday at 3 AM)
+0 3 * * 0 cd /var/www/vinflow && /var/www/vinflow/venv/bin/python manage.py clearsessions
+
+# Renew SSL certificates (Let's Encrypt auto-renewal)
+# This is usually handled by certbot's systemd timer, but you can add manually:
+# 0 0,12 * * * /usr/bin/certbot renew --quiet
+
+# Clean up old log files (keep last 30 days)
+0 4 * * * find /var/log/vinflow -name "*.log" -mtime +30 -delete
+
+# Database VACUUM operation (monthly on 1st at 4 AM)
+0 4 1 * * psql -U vinflow_user -d vinflow_production -c "VACUUM ANALYZE;"
+
+# Check for disk space and alert if > 85% (daily at 6 AM)
+0 6 * * * DISK_USAGE=$(df -h / | awk 'NR==2 {print $5}' | sed 's/%//'); if [ $DISK_USAGE -gt 85 ]; then echo "Disk usage is at ${DISK_USAGE}%" | mail -s "Disk Space Alert" admin@your-domain.com; fi
+
