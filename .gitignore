@@ -151,3 +151,6 @@ local.py
 *.local.py
 
 dump.rdb
+
+151100
+151100.*
