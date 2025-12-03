@@ -372,3 +372,416 @@ def sync_services_from_supplier():
         error_msg = f'Error syncing services: {str(e)}'
         logger.exception(error_msg)
         return {'status': 'error', 'message': error_msg}
+
+
+# ============================================
+# Marketing Promotion Automation Tasks
+# ============================================
+
+@shared_task
+def check_and_expire_promotions():
+    """
+    Check for promotions that have ended and automatically expire them
+    Runs periodically (e.g., every hour)
+    """
+    from django.utils import timezone
+    from .models import MarketingPromotion, Notification
+    
+    logger.info('Starting promotion expiration check...')
+    
+    try:
+        now = timezone.now()
+        
+        # Find promotions that should be expired
+        expired_promotions = MarketingPromotion.objects.filter(
+            is_active=True,
+            auto_expire=True,
+            end_date__lt=now,
+            status='active'
+        )
+        
+        expired_count = 0
+        for promotion in expired_promotions:
+            promotion.status = 'completed'
+            promotion.is_active = False
+            promotion.save()
+            expired_count += 1
+            
+            # Notify admin
+            try:
+                Notification.objects.create(
+                    user=promotion.created_by,
+                    notification_type='system',
+                    title='Promotion Expired',
+                    message=f'Promotion "{promotion.title}" ({promotion.promotion_id}) has expired and been completed.',
+                )
+            except:
+                pass
+            
+            logger.info(f'Expired promotion: {promotion.promotion_id} - {promotion.title}')
+        
+        # Auto-activate scheduled promotions
+        scheduled_promotions = MarketingPromotion.objects.filter(
+            is_active=True,
+            status='scheduled',
+            start_date__lte=now,
+            end_date__gte=now
+        )
+        
+        activated_count = 0
+        for promotion in scheduled_promotions:
+            promotion.status = 'active'
+            promotion.save()
+            activated_count += 1
+            
+            # Notify admin
+            try:
+                Notification.objects.create(
+                    user=promotion.created_by,
+                    notification_type='system',
+                    title='Promotion Activated',
+                    message=f'Promotion "{promotion.title}" ({promotion.promotion_id}) is now active.',
+                )
+            except:
+                pass
+            
+            logger.info(f'Activated promotion: {promotion.promotion_id} - {promotion.title}')
+        
+        result = {
+            'status': 'success',
+            'message': f'Expired {expired_count} promotions, activated {activated_count} promotions',
+            'expired': expired_count,
+            'activated': activated_count
+        }
+        logger.info(f"Promotion check completed: {result['message']}")
+        return result
+        
+    except Exception as e:
+        error_msg = f'Error checking promotions: {str(e)}'
+        logger.exception(error_msg)
+        return {'status': 'error', 'message': error_msg}
+
+
+@shared_task
+def send_promotional_notifications():
+    """
+    Send notifications about active promotions to targeted users
+    Runs periodically (e.g., daily)
+    """
+    from django.utils import timezone
+    from django.contrib.auth.models import User
+    from .models import MarketingPromotion, Notification
+    from datetime import timedelta
+    
+    logger.info('Starting promotional notifications...')
+    
+    try:
+        # Check if promotional emails are enabled
+        promotional_enabled = get_setting('promotional_email_enabled', True)
+        if not promotional_enabled:
+            logger.info('Promotional notifications are disabled')
+            return {'status': 'skipped', 'message': 'Promotional notifications disabled'}
+        
+        now = timezone.now()
+        notification_count = 0
+        
+        # Get active flash sales
+        flash_sales = MarketingPromotion.objects.filter(
+            is_active=True,
+            status='active',
+            promotion_type='flash_sale',
+            start_date__lte=now,
+            end_date__gte=now
+        )
+        
+        flash_sale_notifications = get_setting('flash_sale_notification', True)
+        
+        for promotion in flash_sales:
+            # Check if we've already sent notifications for this promotion
+            # (To avoid spamming, we only send once when it becomes active)
+            
+            # Determine target users
+            target_users = []
+            
+            if promotion.target_audience == 'all':
+                target_users = User.objects.filter(is_active=True)
+            elif promotion.target_audience == 'new_users':
+                seven_days_ago = now - timedelta(days=7)
+                target_users = User.objects.filter(
+                    is_active=True, 
+                    date_joined__gte=seven_days_ago
+                )
+            elif promotion.target_audience == 'active_users':
+                target_users = User.objects.filter(
+                    is_active=True, 
+                    profile__total_spent__gt=0
+                )
+            elif promotion.target_audience == 'inactive_users':
+                target_users = User.objects.filter(
+                    is_active=True, 
+                    profile__total_spent=0
+                )
+            elif promotion.target_audience == 'high_spenders':
+                target_users = User.objects.filter(
+                    is_active=True, 
+                    profile__total_spent__gte=100
+                )
+            elif promotion.target_audience == 'resellers':
+                target_users = User.objects.filter(
+                    is_active=True, 
+                    profile__is_reseller=True
+                )
+            elif promotion.target_audience == 'specific_users':
+                target_users = promotion.specific_users.filter(is_active=True)
+            
+            # Send notifications to target users
+            if flash_sale_notifications:
+                for user in target_users[:100]:  # Limit to 100 users per batch
+                    try:
+                        # Check if user already has notification about this promotion
+                        existing = Notification.objects.filter(
+                            user=user,
+                            notification_type='system',
+                            title__icontains=promotion.promotion_id
+                        ).exists()
+                        
+                        if not existing:
+                            Notification.objects.create(
+                                user=user,
+                                notification_type='system',
+                                title=f'🎉 {promotion.title}',
+                                message=promotion.description or f'Check out our special promotion!',
+                                link=promotion.cta_link or '/'
+                            )
+                            notification_count += 1
+                    except Exception as e:
+                        logger.error(f'Error sending notification to user {user.id}: {str(e)}')
+                        continue
+            
+            logger.info(f'Sent {notification_count} notifications for promotion: {promotion.promotion_id}')
+        
+        result = {
+            'status': 'success',
+            'message': f'Sent {notification_count} promotional notifications',
+            'count': notification_count
+        }
+        logger.info(f"Promotional notifications completed: {result['message']}")
+        return result
+        
+    except Exception as e:
+        error_msg = f'Error sending promotional notifications: {str(e)}'
+        logger.exception(error_msg)
+        return {'status': 'error', 'message': error_msg}
+
+
+@shared_task
+def apply_welcome_bonus_for_new_users():
+    """
+    Apply welcome bonus to newly registered users if enabled
+    Runs periodically (e.g., every 10 minutes)
+    """
+    from django.utils import timezone
+    from django.contrib.auth.models import User
+    from .models import UserProfile, Payment, Notification
+    from datetime import timedelta
+    from decimal import Decimal
+    
+    logger.info('Starting welcome bonus application...')
+    
+    try:
+        # Get welcome bonus amount from settings
+        welcome_bonus = Decimal(get_setting('new_user_welcome_bonus', '0.00'))
+        
+        if welcome_bonus <= 0:
+            logger.info('Welcome bonus is not enabled or is 0')
+            return {'status': 'skipped', 'message': 'Welcome bonus disabled or 0'}
+        
+        # Find users registered in the last 24 hours who haven't received the bonus
+        twenty_four_hours_ago = timezone.now() - timedelta(hours=24)
+        
+        new_users = User.objects.filter(
+            is_active=True,
+            date_joined__gte=twenty_four_hours_ago
+        )
+        
+        bonus_count = 0
+        for user in new_users:
+            try:
+                profile = user.profile
+                
+                # Check if user already received welcome bonus
+                # (Check for payment record with 'welcome_bonus' in gateway_payment_id)
+                existing_bonus = Payment.objects.filter(
+                    user=user,
+                    gateway_payment_id__icontains='welcome_bonus'
+                ).exists()
+                
+                if existing_bonus:
+                    continue
+                
+                # Check if user hasn't made any deposits yet (truly new)
+                has_deposits = Payment.objects.filter(
+                    user=user,
+                    status='completed'
+                ).exists()
+                
+                if has_deposits:
+                    continue  # Don't give bonus if they already deposited
+                
+                # Apply welcome bonus
+                profile.balance += welcome_bonus
+                profile.save()
+                
+                # Create payment record for tracking
+                Payment.objects.create(
+                    transaction_id=f'BONUS_{user.id}_{timezone.now().strftime("%Y%m%d%H%M%S")}',
+                    user=user,
+                    amount=welcome_bonus,
+                    method='khqr',  # Arbitrary method for tracking
+                    status='completed',
+                    gateway_payment_id=f'welcome_bonus_{user.id}',
+                    completed_at=timezone.now()
+                )
+                
+                # Send notification
+                Notification.objects.create(
+                    user=user,
+                    notification_type='payment',
+                    title='Welcome Bonus!',
+                    message=f'Welcome to VinFlow! You have received ${welcome_bonus} as a welcome bonus. Start ordering now!',
+                    link='/services/'
+                )
+                
+                bonus_count += 1
+                logger.info(f'Applied ${welcome_bonus} welcome bonus to user: {user.username}')
+                
+            except Exception as e:
+                logger.error(f'Error applying welcome bonus to user {user.id}: {str(e)}')
+                continue
+        
+        result = {
+            'status': 'success',
+            'message': f'Applied welcome bonus to {bonus_count} new users',
+            'count': bonus_count,
+            'amount': float(welcome_bonus)
+        }
+        logger.info(f"Welcome bonus application completed: {result['message']}")
+        return result
+        
+    except Exception as e:
+        error_msg = f'Error applying welcome bonus: {str(e)}'
+        logger.exception(error_msg)
+        return {'status': 'error', 'message': error_msg}
+
+
+@shared_task
+def generate_promotion_report():
+    """
+    Generate a summary report of all active promotions and their performance
+    Runs periodically (e.g., weekly)
+    """
+    from django.utils import timezone
+    from .models import MarketingPromotion, Notification, User
+    from datetime import timedelta
+    
+    logger.info('Generating promotion performance report...')
+    
+    try:
+        now = timezone.now()
+        thirty_days_ago = now - timedelta(days=30)
+        
+        # Get all promotions from the last 30 days
+        recent_promotions = MarketingPromotion.objects.filter(
+            created_at__gte=thirty_days_ago
+        ).order_by('-views_count')
+        
+        if not recent_promotions:
+            return {'status': 'success', 'message': 'No promotions in the last 30 days'}
+        
+        # Generate report
+        report_lines = [
+            'PROMOTION PERFORMANCE REPORT (Last 30 Days)',
+            '=' * 50,
+            ''
+        ]
+        
+        total_views = 0
+        total_clicks = 0
+        total_conversions = 0
+        total_conversion_value = 0
+        
+        for promo in recent_promotions:
+            total_views += promo.views_count
+            total_clicks += promo.clicks_count
+            total_conversions += promo.conversions_count
+            
+            # Get conversion value
+            from django.db.models import Sum
+            conversion_value = promo.conversions.aggregate(
+                total=Sum('conversion_value')
+            )['total'] or 0
+            total_conversion_value += float(conversion_value)
+            
+            ctr = promo.get_ctr()
+            conv_rate = promo.get_conversion_rate()
+            
+            report_lines.append(f"Promotion: {promo.promotion_id} - {promo.title}")
+            report_lines.append(f"  Type: {promo.get_promotion_type_display()}")
+            report_lines.append(f"  Status: {promo.get_status_display()}")
+            report_lines.append(f"  Views: {promo.views_count}")
+            report_lines.append(f"  Clicks: {promo.clicks_count}")
+            report_lines.append(f"  CTR: {ctr:.2f}%")
+            report_lines.append(f"  Conversions: {promo.conversions_count}")
+            report_lines.append(f"  Conversion Rate: {conv_rate:.2f}%")
+            report_lines.append(f"  Conversion Value: ${conversion_value:.2f}")
+            report_lines.append('')
+        
+        report_lines.append('=' * 50)
+        report_lines.append('TOTALS:')
+        report_lines.append(f"  Total Views: {total_views}")
+        report_lines.append(f"  Total Clicks: {total_clicks}")
+        report_lines.append(f"  Total Conversions: {total_conversions}")
+        report_lines.append(f"  Total Conversion Value: ${total_conversion_value:.2f}")
+        
+        overall_ctr = (total_clicks / total_views * 100) if total_views > 0 else 0
+        overall_conv_rate = (total_conversions / total_clicks * 100) if total_clicks > 0 else 0
+        
+        report_lines.append(f"  Overall CTR: {overall_ctr:.2f}%")
+        report_lines.append(f"  Overall Conversion Rate: {overall_conv_rate:.2f}%")
+        
+        report_text = '\n'.join(report_lines)
+        
+        # Send report to all admin users
+        admin_users = User.objects.filter(profile__role='admin', is_active=True)
+        for admin in admin_users:
+            try:
+                Notification.objects.create(
+                    user=admin,
+                    notification_type='system',
+                    title='Marketing Promotion Report - Last 30 Days',
+                    message=f'Total Views: {total_views} | Clicks: {total_clicks} | Conversions: {total_conversions} | Value: ${total_conversion_value:.2f}'
+                )
+            except Exception as e:
+                logger.error(f'Error sending report to admin {admin.id}: {str(e)}')
+        
+        logger.info(report_text)
+        
+        result = {
+            'status': 'success',
+            'message': 'Promotion report generated successfully',
+            'summary': {
+                'total_views': total_views,
+                'total_clicks': total_clicks,
+                'total_conversions': total_conversions,
+                'total_conversion_value': total_conversion_value,
+                'overall_ctr': overall_ctr,
+                'overall_conversion_rate': overall_conv_rate
+            }
+        }
+        
+        return result
+        
+    except Exception as e:
+        error_msg = f'Error generating promotion report: {str(e)}'
+        logger.exception(error_msg)
+        return {'status': 'error', 'message': error_msg}

@@ -35,7 +35,8 @@ from .models import (
     UserProfile, Service, ServiceCategory, Order, SubscriptionPackage,
     UserSubscription, Coupon, Payment, Ticket, TicketMessage,
     AffiliateCommission, BlogPost, BlacklistIP, BlacklistLink, BlacklistEmail,
-    SystemSetting, Notification
+    SystemSetting, Notification, MarketingPromotion, PromotionView,
+    PromotionClick, PromotionConversion
 )
 
 # Create UserProfile on user creation
@@ -527,6 +528,34 @@ def dashboard(request):
     # Active subscriptions
     active_subscriptions = UserSubscription.objects.filter(user=user, is_active=True).count()
     
+    # Get active promotions for dashboard
+    now = timezone.now()
+    dashboard_promotions = MarketingPromotion.objects.filter(
+        is_active=True,
+        status='active',
+        start_date__lte=now,
+        end_date__gte=now,
+        display_location__in=['dashboard', 'all_pages']
+    ).order_by('-display_priority')[:3]
+    
+    # Filter by target audience
+    filtered_dashboard_promotions = []
+    for promo in dashboard_promotions:
+        if promo.target_audience == 'all':
+            filtered_dashboard_promotions.append(promo)
+        elif promo.target_audience == 'new_users' and profile.created_at >= timezone.now() - timedelta(days=7):
+            filtered_dashboard_promotions.append(promo)
+        elif promo.target_audience == 'active_users' and profile.total_spent > 0:
+            filtered_dashboard_promotions.append(promo)
+        elif promo.target_audience == 'inactive_users' and profile.total_spent == 0:
+            filtered_dashboard_promotions.append(promo)
+        elif promo.target_audience == 'high_spenders' and profile.total_spent >= 100:
+            filtered_dashboard_promotions.append(promo)
+        elif promo.target_audience == 'resellers' and profile.is_reseller:
+            filtered_dashboard_promotions.append(promo)
+        elif promo.target_audience == 'specific_users' and promo.specific_users.filter(id=user.id).exists():
+            filtered_dashboard_promotions.append(promo)
+    
     context = {
         'total_orders': total_orders,
         'completed_orders': completed_orders,
@@ -534,6 +563,7 @@ def dashboard(request):
         'total_spent': total_spent,
         'recent_orders': recent_orders,
         'active_subscriptions': active_subscriptions,
+        'dashboard_promotions': filtered_dashboard_promotions,
     }
     return render(request, 'panel/dashboard.html', context)
 
@@ -3217,4 +3247,479 @@ def check_payment_status(request, payment_id):
             'status': 'error',
             'message': 'Payment not found'
         }, status=404)
+
+
+# ============================================
+# Marketing Promotion Management Views
+# ============================================
+
+def get_client_ip(request):
+    """Get client IP address from request"""
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(',')[0]
+    else:
+        ip = request.META.get('REMOTE_ADDR')
+    return ip
+
+
+@login_required
+def admin_promotions_list(request):
+    """Admin view to list all marketing promotions"""
+    if not request.user.profile.role == 'admin':
+        messages.error(request, 'Access denied. Admin only.')
+        return redirect('dashboard')
+    
+    # Filter and search
+    status = request.GET.get('status', '')
+    promotion_type = request.GET.get('type', '')
+    search = request.GET.get('search', '')
+    
+    promotions = MarketingPromotion.objects.all()
+    
+    if status:
+        promotions = promotions.filter(status=status)
+    if promotion_type:
+        promotions = promotions.filter(promotion_type=promotion_type)
+    if search:
+        promotions = promotions.filter(
+            Q(title__icontains=search) | 
+            Q(title_km__icontains=search) | 
+            Q(promotion_id__icontains=search)
+        )
+    
+    # Pagination
+    paginator = Paginator(promotions, 20)
+    page = request.GET.get('page', 1)
+    
+    try:
+        promotions_page = paginator.page(page)
+    except PageNotAnInteger:
+        promotions_page = paginator.page(1)
+    except EmptyPage:
+        promotions_page = paginator.page(paginator.num_pages)
+    
+    context = {
+        'promotions': promotions_page,
+        'status_choices': MarketingPromotion.STATUS_CHOICES,
+        'type_choices': MarketingPromotion.PROMOTION_TYPES,
+        'current_status': status,
+        'current_type': promotion_type,
+        'search': search,
+    }
+    
+    return render(request, 'panel/admin/promotions_list.html', context)
+
+
+def safe_float(value, default=0.0):
+    """Safely convert a value to float, handling empty strings and None"""
+    if value is None or value == '':
+        return default
+    try:
+        return float(value)
+    except (ValueError, TypeError):
+        return default
+
+def safe_int(value, default=0):
+    """Safely convert a value to int, handling empty strings and None"""
+    if value is None or value == '':
+        return default
+    try:
+        return int(value)
+    except (ValueError, TypeError):
+        return default
+
+
+@login_required
+def admin_promotion_create(request):
+    """Admin view to create a new promotion"""
+    if not request.user.profile.role == 'admin':
+        messages.error(request, 'Access denied. Admin only.')
+        return redirect('dashboard')
+    
+    if request.method == 'POST':
+        try:
+            # Create promotion
+            promotion = MarketingPromotion.objects.create(
+                title=request.POST.get('title'),
+                title_km=request.POST.get('title_km', ''),
+                description=request.POST.get('description', ''),
+                description_km=request.POST.get('description_km', ''),
+                promotion_type=request.POST.get('promotion_type'),
+                status=request.POST.get('status', 'draft'),
+                background_color=request.POST.get('background_color', '#007bff'),
+                text_color=request.POST.get('text_color', '#ffffff'),
+                target_audience=request.POST.get('target_audience', 'all'),
+                display_location=request.POST.get('display_location', 'homepage'),
+                start_date=request.POST.get('start_date'),
+                end_date=request.POST.get('end_date'),
+                display_priority=safe_int(request.POST.get('display_priority'), 0),
+                cta_text=request.POST.get('cta_text', ''),
+                cta_link=request.POST.get('cta_link', ''),
+                discount_code=request.POST.get('discount_code', ''),
+                discount_percentage=safe_float(request.POST.get('discount_percentage'), 0),
+                bonus_amount=safe_float(request.POST.get('bonus_amount'), 0),
+                auto_expire=request.POST.get('auto_expire') == 'on',
+                show_countdown=request.POST.get('show_countdown') == 'on',
+                max_views_per_user=safe_int(request.POST.get('max_views_per_user'), 0),
+                created_by=request.user
+            )
+            
+            # Handle image uploads
+            if 'banner_image' in request.FILES:
+                promotion.banner_image = request.FILES['banner_image']
+            if 'banner_image_mobile' in request.FILES:
+                promotion.banner_image_mobile = request.FILES['banner_image_mobile']
+            
+            promotion.save()
+            
+            messages.success(request, f'Promotion {promotion.promotion_id} created successfully!')
+            return redirect('admin_promotions_list')
+            
+        except Exception as e:
+            messages.error(request, f'Error creating promotion: {str(e)}')
+    
+    context = {
+        'promotion_types': MarketingPromotion.PROMOTION_TYPES,
+        'status_choices': MarketingPromotion.STATUS_CHOICES,
+        'target_audience_choices': MarketingPromotion.TARGET_AUDIENCE,
+        'display_location_choices': MarketingPromotion.DISPLAY_LOCATION,
+    }
+    
+    return render(request, 'panel/admin/promotion_create.html', context)
+
+
+@login_required
+def admin_promotion_edit(request, promotion_id):
+    """Admin view to edit a promotion"""
+    if not request.user.profile.role == 'admin':
+        messages.error(request, 'Access denied. Admin only.')
+        return redirect('dashboard')
+    
+    promotion = get_object_or_404(MarketingPromotion, promotion_id=promotion_id)
+    
+    if request.method == 'POST':
+        try:
+            # Update promotion
+            promotion.title = request.POST.get('title')
+            promotion.title_km = request.POST.get('title_km', '')
+            promotion.description = request.POST.get('description', '')
+            promotion.description_km = request.POST.get('description_km', '')
+            promotion.promotion_type = request.POST.get('promotion_type')
+            promotion.status = request.POST.get('status', 'draft')
+            promotion.background_color = request.POST.get('background_color', '#007bff')
+            promotion.text_color = request.POST.get('text_color', '#ffffff')
+            promotion.target_audience = request.POST.get('target_audience', 'all')
+            promotion.display_location = request.POST.get('display_location', 'homepage')
+            promotion.start_date = request.POST.get('start_date')
+            promotion.end_date = request.POST.get('end_date')
+            promotion.display_priority = safe_int(request.POST.get('display_priority'), 0)
+            promotion.cta_text = request.POST.get('cta_text', '')
+            promotion.cta_link = request.POST.get('cta_link', '')
+            promotion.discount_code = request.POST.get('discount_code', '')
+            promotion.discount_percentage = safe_float(request.POST.get('discount_percentage'), 0)
+            promotion.bonus_amount = safe_float(request.POST.get('bonus_amount'), 0)
+            promotion.auto_expire = request.POST.get('auto_expire') == 'on'
+            promotion.show_countdown = request.POST.get('show_countdown') == 'on'
+            promotion.max_views_per_user = safe_int(request.POST.get('max_views_per_user'), 0)
+            promotion.is_active = request.POST.get('is_active') == 'on'
+            
+            # Handle image uploads
+            if 'banner_image' in request.FILES:
+                promotion.banner_image = request.FILES['banner_image']
+            if 'banner_image_mobile' in request.FILES:
+                promotion.banner_image_mobile = request.FILES['banner_image_mobile']
+            
+            promotion.save()
+            
+            messages.success(request, f'Promotion {promotion.promotion_id} updated successfully!')
+            return redirect('admin_promotions_list')
+            
+        except Exception as e:
+            messages.error(request, f'Error updating promotion: {str(e)}')
+    
+    context = {
+        'promotion': promotion,
+        'promotion_types': MarketingPromotion.PROMOTION_TYPES,
+        'status_choices': MarketingPromotion.STATUS_CHOICES,
+        'target_audience_choices': MarketingPromotion.TARGET_AUDIENCE,
+        'display_location_choices': MarketingPromotion.DISPLAY_LOCATION,
+    }
+    
+    return render(request, 'panel/admin/promotion_edit.html', context)
+
+
+@login_required
+def admin_promotion_delete(request, promotion_id):
+    """Admin view to delete a promotion"""
+    if not request.user.profile.role == 'admin':
+        return JsonResponse({'status': 'error', 'message': 'Access denied'}, status=403)
+    
+    if request.method == 'POST':
+        try:
+            promotion = get_object_or_404(MarketingPromotion, promotion_id=promotion_id)
+            promotion_title = promotion.title
+            promotion.delete()
+            return JsonResponse({
+                'status': 'success',
+                'message': f'Promotion "{promotion_title}" deleted successfully'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': f'Error deleting promotion: {str(e)}'
+            }, status=400)
+    
+    return JsonResponse({'status': 'error', 'message': 'Invalid request'}, status=400)
+
+
+@login_required
+def admin_promotion_analytics(request, promotion_id):
+    """Admin view to see detailed analytics for a promotion"""
+    if not request.user.profile.role == 'admin':
+        messages.error(request, 'Access denied. Admin only.')
+        return redirect('dashboard')
+    
+    promotion = get_object_or_404(MarketingPromotion, promotion_id=promotion_id)
+    
+    # Get analytics data
+    views = PromotionView.objects.filter(promotion=promotion).order_by('-viewed_at')[:50]
+    clicks = PromotionClick.objects.filter(promotion=promotion).order_by('-clicked_at')[:50]
+    conversions = PromotionConversion.objects.filter(promotion=promotion).order_by('-converted_at')[:50]
+    
+    # Calculate daily stats (last 30 days)
+    from datetime import datetime, timedelta
+    thirty_days_ago = timezone.now() - timedelta(days=30)
+    
+    daily_views = PromotionView.objects.filter(
+        promotion=promotion, 
+        viewed_at__gte=thirty_days_ago
+    ).extra(select={'day': 'date(viewed_at)'}).values('day').annotate(count=Count('id')).order_by('day')
+    
+    daily_clicks = PromotionClick.objects.filter(
+        promotion=promotion, 
+        clicked_at__gte=thirty_days_ago
+    ).extra(select={'day': 'date(clicked_at)'}).values('day').annotate(count=Count('id')).order_by('day')
+    
+    daily_conversions = PromotionConversion.objects.filter(
+        promotion=promotion, 
+        converted_at__gte=thirty_days_ago
+    ).extra(select={'day': 'date(converted_at)'}).values('day').annotate(count=Count('id')).order_by('day')
+    
+    # Total conversion value
+    total_conversion_value = PromotionConversion.objects.filter(
+        promotion=promotion
+    ).aggregate(total=Sum('conversion_value'))['total'] or 0
+    
+    # Serialize daily data for JSON (convert date objects to strings)
+    import json
+    daily_views_json = json.dumps([{'day': str(item['day']), 'count': item['count']} for item in daily_views])
+    daily_clicks_json = json.dumps([{'day': str(item['day']), 'count': item['count']} for item in daily_clicks])
+    daily_conversions_json = json.dumps([{'day': str(item['day']), 'count': item['count']} for item in daily_conversions])
+    
+    context = {
+        'promotion': promotion,
+        'views': views,
+        'clicks': clicks,
+        'conversions': conversions,
+        'daily_views': daily_views_json,
+        'daily_clicks': daily_clicks_json,
+        'daily_conversions': daily_conversions_json,
+        'total_conversion_value': total_conversion_value,
+        'ctr': promotion.get_ctr(),
+        'conversion_rate': promotion.get_conversion_rate(),
+    }
+    
+    return render(request, 'panel/admin/promotion_analytics.html', context)
+
+
+# Public promotion tracking endpoints
+@require_http_methods(["POST"])
+def track_promotion_view(request):
+    """Track when a user views a promotion"""
+    try:
+        promotion_id = request.POST.get('promotion_id')
+        promotion = get_object_or_404(MarketingPromotion, promotion_id=promotion_id)
+        
+        # Check max views per user
+        if promotion.max_views_per_user > 0 and request.user.is_authenticated:
+            user_views_count = PromotionView.objects.filter(
+                promotion=promotion, 
+                user=request.user
+            ).count()
+            
+            if user_views_count >= promotion.max_views_per_user:
+                return JsonResponse({'status': 'max_views_reached'})
+        
+        # Record view
+        PromotionView.objects.create(
+            promotion=promotion,
+            user=request.user if request.user.is_authenticated else None,
+            ip_address=get_client_ip(request),
+            user_agent=request.META.get('HTTP_USER_AGENT', '')[:500]
+        )
+        
+        # Increment view count
+        promotion.views_count += 1
+        promotion.save(update_fields=['views_count'])
+        
+        return JsonResponse({'status': 'success'})
+        
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+
+
+@require_http_methods(["POST"])
+def track_promotion_click(request):
+    """Track when a user clicks on a promotion"""
+    try:
+        promotion_id = request.POST.get('promotion_id')
+        promotion = get_object_or_404(MarketingPromotion, promotion_id=promotion_id)
+        
+        # Record click
+        PromotionClick.objects.create(
+            promotion=promotion,
+            user=request.user if request.user.is_authenticated else None,
+            ip_address=get_client_ip(request)
+        )
+        
+        # Increment click count
+        promotion.clicks_count += 1
+        promotion.save(update_fields=['clicks_count'])
+        
+        return JsonResponse({'status': 'success'})
+        
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+
+
+def get_active_promotions(request):
+    """API endpoint to get currently active promotions for display"""
+    location = request.GET.get('location', 'homepage')
+    
+    # Get active promotions for this location
+    now = timezone.now()
+    promotions = MarketingPromotion.objects.filter(
+        is_active=True,
+        status='active',
+        start_date__lte=now,
+        end_date__gte=now,
+        display_location__in=[location, 'all_pages']
+    ).order_by('-display_priority')
+    
+    # Filter by target audience
+    if request.user.is_authenticated:
+        profile = request.user.profile
+        
+        # Filter based on audience targeting
+        filtered_promotions = []
+        for promo in promotions:
+            if promo.target_audience == 'all':
+                filtered_promotions.append(promo)
+            elif promo.target_audience == 'new_users' and profile.created_at >= timezone.now() - timedelta(days=7):
+                filtered_promotions.append(promo)
+            elif promo.target_audience == 'active_users' and profile.total_spent > 0:
+                filtered_promotions.append(promo)
+            elif promo.target_audience == 'inactive_users' and profile.total_spent == 0:
+                filtered_promotions.append(promo)
+            elif promo.target_audience == 'high_spenders' and profile.total_spent >= 100:
+                filtered_promotions.append(promo)
+            elif promo.target_audience == 'resellers' and profile.is_reseller:
+                filtered_promotions.append(promo)
+            elif promo.target_audience == 'specific_users' and promo.specific_users.filter(id=request.user.id).exists():
+                filtered_promotions.append(promo)
+        
+        promotions = filtered_promotions
+    else:
+        # Only show promotions for 'all' or 'new_users' to non-authenticated users
+        promotions = [p for p in promotions if p.target_audience in ['all', 'new_users']]
+    
+    # Limit to max per page setting
+    try:
+        max_per_page = SystemSetting.objects.get(key='promotion_max_per_page').get_int_value()
+    except:
+        max_per_page = 3
+    
+    promotions = promotions[:max_per_page]
+    
+    # Serialize promotions
+    promotions_data = [{
+        'promotion_id': p.promotion_id,
+        'title': p.title,
+        'title_km': p.title_km,
+        'description': p.description,
+        'description_km': p.description_km,
+        'promotion_type': p.promotion_type,
+        'banner_image': p.banner_image.url if p.banner_image else '',
+        'background_color': p.background_color,
+        'text_color': p.text_color,
+        'cta_text': p.cta_text,
+        'cta_link': p.cta_link,
+        'show_countdown': p.show_countdown,
+        'end_date': p.end_date.isoformat() if p.show_countdown else None,
+    } for p in promotions]
+    
+    return JsonResponse({'promotions': promotions_data})
+
+
+@login_required
+def user_promotions(request):
+    """User-facing view to see all active promotions"""
+    now = timezone.now()
+    
+    # Get active promotions
+    promotions = MarketingPromotion.objects.filter(
+        is_active=True,
+        status='active',
+        start_date__lte=now,
+        end_date__gte=now
+    ).order_by('-display_priority', '-created_at')
+    
+    # Filter by target audience
+    profile = request.user.profile
+    filtered_promotions = []
+    
+    for promo in promotions:
+        if promo.target_audience == 'all':
+            filtered_promotions.append(promo)
+        elif promo.target_audience == 'new_users' and profile.created_at >= timezone.now() - timedelta(days=7):
+            filtered_promotions.append(promo)
+        elif promo.target_audience == 'active_users' and profile.total_spent > 0:
+            filtered_promotions.append(promo)
+        elif promo.target_audience == 'inactive_users' and profile.total_spent == 0:
+            filtered_promotions.append(promo)
+        elif promo.target_audience == 'high_spenders' and profile.total_spent >= 100:
+            filtered_promotions.append(promo)
+        elif promo.target_audience == 'resellers' and profile.is_reseller:
+            filtered_promotions.append(promo)
+        elif promo.target_audience == 'specific_users' and promo.specific_users.filter(id=request.user.id).exists():
+            filtered_promotions.append(promo)
+    
+    # Check which promotions user has already viewed (for max_views_per_user)
+    viewed_promotion_ids = set()
+    if request.user.is_authenticated:
+        user_views = PromotionView.objects.filter(
+            user=request.user,
+            promotion__in=filtered_promotions
+        ).values_list('promotion_id', flat=True)
+        viewed_promotion_ids = set(user_views)
+    
+    # Filter out promotions that user has exceeded max views
+    final_promotions = []
+    for promo in filtered_promotions:
+        if promo.max_views_per_user > 0:
+            view_count = PromotionView.objects.filter(
+                promotion=promo,
+                user=request.user
+            ).count()
+            if view_count >= promo.max_views_per_user:
+                continue
+        final_promotions.append(promo)
+    
+    context = {
+        'promotions': final_promotions,
+        'viewed_promotion_ids': viewed_promotion_ids,
+    }
+    
+    return render(request, 'panel/promotions.html', context)
 

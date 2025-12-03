@@ -1,0 +1,308 @@
+{% extends 'panel/admin/base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Edit Promotion" %} - VinFlow{% endblock %}
+
+{% block admin_content %}
+<div class="space-y-6">
+    <div class="flex justify-between items-center">
+        <div>
+            <h1 class="text-3xl font-bold">{% trans "Edit Promotion" %}</h1>
+            <p class="text-gray-400 mt-1">{{ promotion.promotion_id }} - {{ promotion.title }}</p>
+        </div>
+        <div class="flex gap-2">
+            <a href="{% url 'admin_promotion_analytics' promotion.promotion_id %}" 
+               class="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 rounded-lg text-sm">
+                {% trans "View Analytics" %}
+            </a>
+            <a href="{% url 'admin_promotions_list' %}" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm">
+                {% trans "Back to List" %}
+            </a>
+        </div>
+    </div>
+    
+    <form method="post" enctype="multipart/form-data" class="space-y-6">
+        {% csrf_token %}
+        
+        <!-- Basic Information -->
+        <div class="card-glass rounded-xl p-6">
+            <h2 class="text-xl font-bold mb-4 text-purple-400">{% trans "Basic Information" %}</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2">{% trans "Title" %} *</label>
+                    <input type="text" name="title" value="{{ promotion.title }}" required 
+                           class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">{% trans "Title (Khmer)" %}</label>
+                    <input type="text" name="title_km" value="{{ promotion.title_km }}" 
+                           class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">{% trans "Description" %}</label>
+                    <textarea name="description" rows="3" 
+                              class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2">{{ promotion.description }}</textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">{% trans "Description (Khmer)" %}</label>
+                    <textarea name="description_km" rows="3" 
+                              class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2">{{ promotion.description_km }}</textarea>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">{% trans "Promotion Type" %} *</label>
+                        <select name="promotion_type" required 
+                                class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2">
+                            {% for type_key, type_label in promotion_types %}
+                            <option value="{{ type_key }}" {% if promotion.promotion_type == type_key %}selected{% endif %}>
+                                {{ type_label }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">{% trans "Status" %} *</label>
+                        <select name="status" required 
+                                class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2">
+                            {% for status_key, status_label in status_choices %}
+                            <option value="{{ status_key }}" {% if promotion.status == status_key %}selected{% endif %}>
+                                {{ status_label }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Visual Design -->
+        <div class="card-glass rounded-xl p-6">
+            <h2 class="text-xl font-bold mb-4 text-purple-400">{% trans "Visual Design" %}</h2>
+            <div class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">{% trans "Banner Image (Desktop)" %}</label>
+                        {% if promotion.banner_image %}
+                        <div class="mb-2">
+                            <img src="{{ promotion.banner_image.url }}" alt="Current banner" class="w-full h-32 object-cover rounded-lg mb-2">
+                            <p class="text-xs text-gray-500">{% trans "Current image" %}</p>
+                        </div>
+                        {% endif %}
+                        <input type="file" name="banner_image" accept="image/*" 
+                               class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2">
+                        <p class="text-xs text-gray-500 mt-1">{% trans "Leave empty to keep current image" %}</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">{% trans "Banner Image (Mobile)" %}</label>
+                        {% if promotion.banner_image_mobile %}
+                        <div class="mb-2">
+                            <img src="{{ promotion.banner_image_mobile.url }}" alt="Current mobile banner" class="w-full h-32 object-cover rounded-lg mb-2">
+                            <p class="text-xs text-gray-500">{% trans "Current image" %}</p>
+                        </div>
+                        {% endif %}
+                        <input type="file" name="banner_image_mobile" accept="image/*" 
+                               class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2">
+                        <p class="text-xs text-gray-500 mt-1">{% trans "Leave empty to keep current image" %}</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">{% trans "Background Color" %}</label>
+                        <div class="flex gap-2">
+                            <input type="color" name="background_color" value="{{ promotion.background_color }}" 
+                                   class="h-10 w-20 rounded-lg border border-slate-600">
+                            <input type="text" name="background_color" value="{{ promotion.background_color }}" 
+                                   class="flex-1 bg-slate-700 border border-slate-600 rounded-lg px-4 py-2">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">{% trans "Text Color" %}</label>
+                        <div class="flex gap-2">
+                            <input type="color" name="text_color" value="{{ promotion.text_color }}" 
+                                   class="h-10 w-20 rounded-lg border border-slate-600">
+                            <input type="text" name="text_color" value="{{ promotion.text_color }}" 
+                                   class="flex-1 bg-slate-700 border border-slate-600 rounded-lg px-4 py-2">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Targeting -->
+        <div class="card-glass rounded-xl p-6">
+            <h2 class="text-xl font-bold mb-4 text-purple-400">{% trans "Targeting & Display" %}</h2>
+            <div class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">{% trans "Target Audience" %} *</label>
+                        <select name="target_audience" required 
+                                class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2">
+                            {% for audience_key, audience_label in target_audience_choices %}
+                            <option value="{{ audience_key }}" {% if promotion.target_audience == audience_key %}selected{% endif %}>
+                                {{ audience_label }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">{% trans "Display Location" %} *</label>
+                        <select name="display_location" required 
+                                class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2">
+                            {% for location_key, location_label in display_location_choices %}
+                            <option value="{{ location_key }}" {% if promotion.display_location == location_key %}selected{% endif %}>
+                                {{ location_label }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">{% trans "Display Priority" %}</label>
+                    <input type="number" name="display_priority" value="{{ promotion.display_priority }}" min="0" max="100" 
+                           class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2">
+                    <p class="text-xs text-gray-500 mt-1">{% trans "Higher number = higher priority (shown first)" %}</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Schedule -->
+        <div class="card-glass rounded-xl p-6">
+            <h2 class="text-xl font-bold mb-4 text-purple-400">{% trans "Schedule" %}</h2>
+            <div class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">{% trans "Start Date & Time" %} *</label>
+                        <input type="datetime-local" name="start_date" 
+                               value="{{ promotion.start_date|date:'Y-m-d\TH:i' }}" required 
+                               class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">{% trans "End Date & Time" %} *</label>
+                        <input type="datetime-local" name="end_date" 
+                               value="{{ promotion.end_date|date:'Y-m-d\TH:i' }}" required 
+                               class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2">
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Call to Action -->
+        <div class="card-glass rounded-xl p-6">
+            <h2 class="text-xl font-bold mb-4 text-purple-400">{% trans "Call to Action" %}</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2">{% trans "Button Text" %}</label>
+                    <input type="text" name="cta_text" value="{{ promotion.cta_text }}" 
+                           class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">{% trans "Button Link" %}</label>
+                    <input type="text" name="cta_link" value="{{ promotion.cta_link }}" 
+                           class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2">
+                </div>
+            </div>
+        </div>
+        
+        <!-- Offer Details -->
+        <div class="card-glass rounded-xl p-6">
+            <h2 class="text-xl font-bold mb-4 text-purple-400">{% trans "Offer Details" %}</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2">{% trans "Discount Code" %}</label>
+                    <input type="text" name="discount_code" value="{{ promotion.discount_code }}" 
+                           class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2">
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">{% trans "Discount Percentage" %}</label>
+                        <input type="number" name="discount_percentage" value="{{ promotion.discount_percentage }}" min="0" max="100" step="0.01" 
+                               class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">{% trans "Bonus Amount" %}</label>
+                        <input type="number" name="bonus_amount" value="{{ promotion.bonus_amount }}" min="0" step="0.01" 
+                               class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2">
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Settings -->
+        <div class="card-glass rounded-xl p-6">
+            <h2 class="text-xl font-bold mb-4 text-purple-400">{% trans "Settings" %}</h2>
+            <div class="space-y-4">
+                <div class="flex items-center space-x-3">
+                    <label class="toggle-switch">
+                        <input type="checkbox" name="is_active" {% if promotion.is_active %}checked{% endif %}>
+                        <span class="toggle-slider"></span>
+                    </label>
+                    <div>
+                        <label class="text-sm font-medium">{% trans "Active" %}</label>
+                        <p class="text-xs text-gray-500">{% trans "Enable this promotion" %}</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <label class="toggle-switch">
+                        <input type="checkbox" name="auto_expire" {% if promotion.auto_expire %}checked{% endif %}>
+                        <span class="toggle-slider"></span>
+                    </label>
+                    <div>
+                        <label class="text-sm font-medium">{% trans "Auto Expire" %}</label>
+                        <p class="text-xs text-gray-500">{% trans "Automatically expire after end date" %}</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <label class="toggle-switch">
+                        <input type="checkbox" name="show_countdown" {% if promotion.show_countdown %}checked{% endif %}>
+                        <span class="toggle-slider"></span>
+                    </label>
+                    <div>
+                        <label class="text-sm font-medium">{% trans "Show Countdown Timer" %}</label>
+                        <p class="text-xs text-gray-500">{% trans "Display countdown timer on promotion" %}</p>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">{% trans "Max Views Per User" %}</label>
+                    <input type="number" name="max_views_per_user" value="{{ promotion.max_views_per_user }}" min="0" 
+                           class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2">
+                    <p class="text-xs text-gray-500 mt-1">{% trans "0 = unlimited views" %}</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Performance Summary -->
+        <div class="card-glass rounded-xl p-6">
+            <h2 class="text-xl font-bold mb-4 text-purple-400">{% trans "Performance Summary" %}</h2>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="text-center p-4 bg-slate-800/50 rounded-lg">
+                    <div class="text-2xl font-bold text-purple-400">{{ promotion.views_count }}</div>
+                    <div class="text-sm text-gray-400 mt-1">{% trans "Views" %}</div>
+                </div>
+                <div class="text-center p-4 bg-slate-800/50 rounded-lg">
+                    <div class="text-2xl font-bold text-cyan-400">{{ promotion.clicks_count }}</div>
+                    <div class="text-sm text-gray-400 mt-1">{% trans "Clicks" %}</div>
+                </div>
+                <div class="text-center p-4 bg-slate-800/50 rounded-lg">
+                    <div class="text-2xl font-bold text-green-400">{{ promotion.get_ctr|floatformat:1 }}%</div>
+                    <div class="text-sm text-gray-400 mt-1">{% trans "CTR" %}</div>
+                </div>
+                <div class="text-center p-4 bg-slate-800/50 rounded-lg">
+                    <div class="text-2xl font-bold text-yellow-400">{{ promotion.conversions_count }}</div>
+                    <div class="text-sm text-gray-400 mt-1">{% trans "Conversions" %}</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Submit Buttons -->
+        <div class="flex gap-4">
+            <button type="submit" class="btn-primary">
+                {% trans "Update Promotion" %}
+            </button>
+            <a href="{% url 'admin_promotions_list' %}" class="px-6 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg">
+                {% trans "Cancel" %}
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

@@ -133,6 +133,70 @@
         </a>
     </div>
     
+    <!-- Active Promotions -->
+    {% if dashboard_promotions %}
+    <div class="card-glass rounded-xl p-6">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-bold">{% trans "Special Offers" %}</h2>
+            <a href="{% url 'user_promotions' %}" class="text-purple-400 hover:text-purple-300 text-sm">{% trans "View All Promotions" %}</a>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {% for promotion in dashboard_promotions %}
+            <div class="promotion-widget card-glass rounded-lg overflow-hidden hover:scale-105 transition-transform duration-300 border border-purple-500/30"
+                 data-promotion-id="{{ promotion.promotion_id }}">
+                {% if promotion.banner_image %}
+                <div class="relative h-32 overflow-hidden">
+                    <img src="{{ promotion.banner_image.url }}" 
+                         alt="{{ promotion.title }}" 
+                         class="w-full h-full object-cover"
+                         onerror="this.style.display='none'">
+                </div>
+                {% else %}
+                <div class="h-32 flex items-center justify-center" style="background-color: {{ promotion.background_color }};">
+                    <h4 class="text-lg font-bold px-4 text-center" style="color: {{ promotion.text_color }};">
+                        {{ promotion.title|truncatewords:5 }}
+                    </h4>
+                </div>
+                {% endif %}
+                
+                <div class="p-4">
+                    <h4 class="font-bold mb-2 text-sm">
+                        {% if is_khmer and promotion.title_km %}{{ promotion.title_km|truncatewords:6 }}{% else %}{{ promotion.title|truncatewords:6 }}{% endif %}
+                    </h4>
+                    {% if promotion.discount_percentage > 0 or promotion.bonus_amount > 0 %}
+                    <div class="flex gap-2 mb-3">
+                        {% if promotion.discount_percentage > 0 %}
+                        <span class="px-2 py-1 bg-green-900/50 text-green-400 rounded text-xs font-bold">
+                            {{ promotion.discount_percentage }}% OFF
+                        </span>
+                        {% endif %}
+                        {% if promotion.bonus_amount > 0 %}
+                        <span class="px-2 py-1 bg-purple-900/50 text-purple-400 rounded text-xs font-bold">
+                            +${{ promotion.bonus_amount|floatformat:0 }}
+                        </span>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                    {% if promotion.cta_text and promotion.cta_link %}
+                    <a href="{{ promotion.cta_link }}" 
+                       class="promotion-cta block w-full text-center px-3 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm font-medium transition"
+                       data-promotion-id="{{ promotion.promotion_id }}">
+                        {{ promotion.cta_text }}
+                    </a>
+                    {% else %}
+                    <a href="{% url 'user_promotions' %}" 
+                       class="block w-full text-center px-3 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm font-medium transition">
+                        {% trans "View Details" %}
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    
     <!-- Recent Orders -->
     <div class="card-glass rounded-xl p-6">
         <div class="flex justify-between items-center mb-4">
@@ -182,4 +246,77 @@
         {% endif %}
     </div>
 </div>
+
+{% if dashboard_promotions %}
+<script>
+// Track promotion views when widget is visible
+document.addEventListener('DOMContentLoaded', function() {
+    const promotionWidgets = document.querySelectorAll('.promotion-widget');
+    
+    promotionWidgets.forEach(widget => {
+        const promotionId = widget.dataset.promotionId;
+        
+        // Track view when widget comes into viewport
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    trackPromotionView(promotionId);
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.5 });
+        
+        observer.observe(widget);
+    });
+    
+    // Track clicks on CTA buttons
+    document.querySelectorAll('.promotion-cta').forEach(button => {
+        button.addEventListener('click', function(e) {
+            const promotionId = this.dataset.promotionId;
+            trackPromotionClick(promotionId);
+        });
+    });
+});
+
+// Function to track promotion view
+function trackPromotionView(promotionId) {
+    fetch('/promotions/track-view/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: `promotion_id=${promotionId}`
+    }).catch(err => console.error('Error tracking view:', err));
+}
+
+// Function to track promotion click
+function trackPromotionClick(promotionId) {
+    fetch('/promotions/track-click/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: `promotion_id=${promotionId}`
+    }).catch(err => console.error('Error tracking click:', err));
+}
+
+// Helper function to get CSRF token
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+{% endif %}
 {% endblock %}

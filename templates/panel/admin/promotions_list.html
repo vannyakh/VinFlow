@@ -1,0 +1,235 @@
+{% extends 'panel/admin/base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Marketing Promotions" %} - VinFlow{% endblock %}
+
+{% block admin_content %}
+<div class="space-y-6">
+    <div class="flex justify-between items-center flex-wrap gap-4">
+        <h1 class="text-3xl font-bold">{% trans "Marketing Promotions" %}</h1>
+        <a href="{% url 'admin_promotion_create' %}" class="btn-primary">
+            <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+            </svg>
+            {% trans "Create Promotion" %}
+        </a>
+    </div>
+    
+    <!-- Search and Filters -->
+    <div class="card-glass rounded-xl p-4">
+        <form method="get" class="space-y-4">
+            <div class="flex gap-4 flex-wrap">
+                <input type="text" name="search" value="{{ search }}" placeholder="{% trans 'Search promotions...' %}" 
+                       class="flex-1 min-w-[200px] bg-slate-700 border border-slate-600 rounded-lg px-4 py-2">
+                <select name="status" class="bg-slate-700 border border-slate-600 rounded-lg px-4 py-2">
+                    <option value="">{% trans "All Status" %}</option>
+                    {% for status_key, status_label in status_choices %}
+                    <option value="{{ status_key }}" {% if current_status == status_key %}selected{% endif %}>
+                        {{ status_label }}
+                    </option>
+                    {% endfor %}
+                </select>
+                <select name="type" class="bg-slate-700 border border-slate-600 rounded-lg px-4 py-2">
+                    <option value="">{% trans "All Types" %}</option>
+                    {% for type_key, type_label in type_choices %}
+                    <option value="{{ type_key }}" {% if current_type == type_key %}selected{% endif %}>
+                        {{ type_label }}
+                    </option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="btn-primary">{% trans "Filter" %}</button>
+                {% if search or current_status or current_type %}
+                <a href="{% url 'admin_promotions_list' %}" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm">
+                    {% trans "Clear" %}
+                </a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+    
+    <!-- Promotions Table -->
+    <div class="card-glass rounded-xl p-6">
+        {% if promotions %}
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="border-b border-slate-700">
+                        <th class="text-left py-3 px-4">{% trans "Promotion" %}</th>
+                        <th class="text-left py-3 px-4">{% trans "Type" %}</th>
+                        <th class="text-left py-3 px-4">{% trans "Status" %}</th>
+                        <th class="text-left py-3 px-4">{% trans "Target" %}</th>
+                        <th class="text-left py-3 px-4">{% trans "Location" %}</th>
+                        <th class="text-left py-3 px-4">{% trans "Period" %}</th>
+                        <th class="text-left py-3 px-4">{% trans "Performance" %}</th>
+                        <th class="text-left py-3 px-4">{% trans "Actions" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for promotion in promotions %}
+                    <tr class="border-b border-slate-800 hover:bg-slate-800/50">
+                        <td class="py-3 px-4">
+                            <div class="font-medium">{{ promotion.title }}</div>
+                            <div class="text-xs text-gray-500 mt-1">{{ promotion.promotion_id }}</div>
+                            {% if promotion.description %}
+                            <div class="text-xs text-gray-400 mt-1 line-clamp-1">{{ promotion.description|truncatewords:10 }}</div>
+                            {% endif %}
+                        </td>
+                        <td class="py-3 px-4">
+                            <span class="px-2 py-1 rounded text-xs bg-purple-900/50 text-purple-300 uppercase">
+                                {{ promotion.get_promotion_type_display }}
+                            </span>
+                        </td>
+                        <td class="py-3 px-4">
+                            <span class="px-2 py-1 rounded text-xs 
+                                {% if promotion.status == 'active' %}bg-green-900/50 text-green-400
+                                {% elif promotion.status == 'draft' %}bg-gray-900/50 text-gray-400
+                                {% elif promotion.status == 'scheduled' %}bg-blue-900/50 text-blue-400
+                                {% elif promotion.status == 'paused' %}bg-yellow-900/50 text-yellow-400
+                                {% elif promotion.status == 'completed' %}bg-cyan-900/50 text-cyan-400
+                                {% else %}bg-red-900/50 text-red-400{% endif %}">
+                                {{ promotion.get_status_display }}
+                            </span>
+                        </td>
+                        <td class="py-3 px-4">
+                            <span class="text-xs text-gray-400">{{ promotion.get_target_audience_display }}</span>
+                        </td>
+                        <td class="py-3 px-4">
+                            <span class="text-xs text-gray-400">{{ promotion.get_display_location_display }}</span>
+                        </td>
+                        <td class="py-3 px-4">
+                            <div class="text-xs">
+                                <div>{{ promotion.start_date|date:"M d, Y" }}</div>
+                                <div class="text-gray-500">to {{ promotion.end_date|date:"M d, Y" }}</div>
+                            </div>
+                        </td>
+                        <td class="py-3 px-4">
+                            <div class="text-xs space-y-1">
+                                <div class="text-gray-400">
+                                    <span class="text-purple-400">{{ promotion.views_count }}</span> {% trans "views" %}
+                                </div>
+                                <div class="text-gray-400">
+                                    <span class="text-cyan-400">{{ promotion.clicks_count }}</span> {% trans "clicks" %}
+                                </div>
+                                <div class="text-gray-400">
+                                    CTR: <span class="text-green-400">{{ promotion.get_ctr|floatformat:1 }}%</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="py-3 px-4">
+                            <div class="flex gap-2">
+                                <a href="{% url 'admin_promotion_edit' promotion.promotion_id %}" 
+                                   class="text-purple-400 hover:text-purple-300 text-sm" title="{% trans 'Edit' %}">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                    </svg>
+                                </a>
+                                <a href="{% url 'admin_promotion_analytics' promotion.promotion_id %}" 
+                                   class="text-cyan-400 hover:text-cyan-300 text-sm" title="{% trans 'Analytics' %}">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                                    </svg>
+                                </a>
+                                <button onclick="deletePromotion('{{ promotion.promotion_id }}', '{{ promotion.title }}')" 
+                                        class="text-red-400 hover:text-red-300 text-sm" title="{% trans 'Delete' %}">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination -->
+        {% if promotions.has_other_pages %}
+        <div class="mt-6 flex justify-center items-center gap-2">
+            {% if promotions.has_previous %}
+            <a href="?page={{ promotions.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_type %}&type={{ current_type }}{% endif %}" 
+               class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm">
+                {% trans "Previous" %}
+            </a>
+            {% endif %}
+            
+            <span class="px-4 py-2 text-sm text-gray-400">
+                {% trans "Page" %} {{ promotions.number }} {% trans "of" %} {{ promotions.paginator.num_pages }}
+            </span>
+            
+            {% if promotions.has_next %}
+            <a href="?page={{ promotions.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_type %}&type={{ current_type }}{% endif %}" 
+               class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm">
+                {% trans "Next" %}
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="text-center py-12">
+            <svg class="w-16 h-16 mx-auto text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"></path>
+            </svg>
+            <p class="text-gray-400 mb-4">{% trans "No promotions found" %}</p>
+            <a href="{% url 'admin_promotion_create' %}" class="btn-primary inline-block">
+                {% trans "Create Your First Promotion" %}
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function deletePromotion(promotionId, title) {
+    Swal.fire({
+        title: '{% trans "Delete Promotion?" %}',
+        text: `{% trans "Are you sure you want to delete" %} "${title}"?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        cancelButtonColor: '#6b7280',
+        confirmButtonText: '{% trans "Yes, delete it" %}',
+        cancelButtonText: '{% trans "Cancel" %}'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            fetch(`/admin/promotions/${promotionId}/delete/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    Swal.fire({
+                        title: '{% trans "Deleted!" %}',
+                        text: data.message,
+                        icon: 'success',
+                        confirmButtonColor: '#7c3aed'
+                    }).then(() => {
+                        location.reload();
+                    });
+                } else {
+                    Swal.fire({
+                        title: '{% trans "Error" %}',
+                        text: data.message,
+                        icon: 'error',
+                        confirmButtonColor: '#7c3aed'
+                    });
+                }
+            })
+            .catch(error => {
+                Swal.fire({
+                    title: '{% trans "Error" %}',
+                    text: '{% trans "An error occurred while deleting the promotion" %}',
+                    icon: 'error',
+                    confirmButtonColor: '#7c3aed'
+                });
+            });
+        }
+    });
+}
+</script>
+{% endblock %}
+

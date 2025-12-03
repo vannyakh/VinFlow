@@ -69,6 +69,19 @@ urlpatterns = [
     path('admin/notifications/<int:notification_id>/mark-read/', views.admin_mark_notification_read, name='admin_mark_notification_read'),
     path('admin/notifications/create/', views.admin_create_notification, name='admin_create_notification'),
     
+    # Marketing Promotion Routes (Admin)
+    path('admin/promotions/', views.admin_promotions_list, name='admin_promotions_list'),
+    path('admin/promotions/create/', views.admin_promotion_create, name='admin_promotion_create'),
+    path('admin/promotions/<str:promotion_id>/edit/', views.admin_promotion_edit, name='admin_promotion_edit'),
+    path('admin/promotions/<str:promotion_id>/delete/', views.admin_promotion_delete, name='admin_promotion_delete'),
+    path('admin/promotions/<str:promotion_id>/analytics/', views.admin_promotion_analytics, name='admin_promotion_analytics'),
+    
+    # Marketing Promotion Tracking (Public/User)
+    path('promotions/', views.user_promotions, name='user_promotions'),
+    path('promotions/track-view/', views.track_promotion_view, name='track_promotion_view'),
+    path('promotions/track-click/', views.track_promotion_click, name='track_promotion_click'),
+    path('promotions/active/', views.get_active_promotions, name='get_active_promotions'),
+    
     # 2FA Routes
     path('verify-2fa/', views.verify_2fa, name='verify_2fa'),
     path('setup-2fa/', views.setup_2fa, name='setup_2fa'),

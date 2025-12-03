@@ -2,7 +2,8 @@ from django.contrib import admin
 from .models import (
     UserProfile, ServiceCategory, Service, Order, SubscriptionPackage,
     UserSubscription, Coupon, Payment, Ticket, TicketMessage,
-    AffiliateCommission, BlogPost, SystemSetting
+    AffiliateCommission, BlogPost, SystemSetting, MarketingPromotion,
+    PromotionView, PromotionClick, PromotionConversion
 )
 
 @admin.register(UserProfile)
@@ -101,3 +102,155 @@ class SystemSettingAdmin(admin.ModelAdmin):
     def get_value(self, obj):
         return obj.get_value()[:50] + '...' if len(obj.get_value()) > 50 else obj.get_value()
     get_value.short_description = 'Value'
+
+
+# Marketing Promotion Admin
+class PromotionViewInline(admin.TabularInline):
+    model = PromotionView
+    extra = 0
+    readonly_fields = ['user', 'ip_address', 'user_agent', 'viewed_at']
+    can_delete = False
+    max_num = 10
+
+
+class PromotionClickInline(admin.TabularInline):
+    model = PromotionClick
+    extra = 0
+    readonly_fields = ['user', 'ip_address', 'clicked_at']
+    can_delete = False
+    max_num = 10
+
+
+class PromotionConversionInline(admin.TabularInline):
+    model = PromotionConversion
+    extra = 0
+    readonly_fields = ['user', 'conversion_type', 'conversion_value', 'order', 'payment', 'converted_at']
+    can_delete = False
+    max_num = 10
+
+
+@admin.register(MarketingPromotion)
+class MarketingPromotionAdmin(admin.ModelAdmin):
+    list_display = [
+        'promotion_id', 'title', 'promotion_type', 'status', 'target_audience', 
+        'display_location', 'start_date', 'end_date', 'get_performance', 'is_active'
+    ]
+    list_filter = [
+        'promotion_type', 'status', 'target_audience', 'display_location', 
+        'is_active', 'start_date', 'end_date'
+    ]
+    search_fields = ['promotion_id', 'title', 'title_km', 'description']
+    readonly_fields = [
+        'promotion_id', 'views_count', 'clicks_count', 'conversions_count',
+        'get_ctr', 'get_conversion_rate', 'created_at', 'updated_at'
+    ]
+    list_editable = ['is_active', 'status']
+    filter_horizontal = ['specific_users']
+    inlines = [PromotionViewInline, PromotionClickInline, PromotionConversionInline]
+    
+    fieldsets = (
+        ('Basic Information', {
+            'fields': (
+                'promotion_id', 'title', 'title_km', 'description', 'description_km',
+                'promotion_type', 'status'
+            )
+        }),
+        ('Visual Design', {
+            'fields': (
+                'banner_image', 'banner_image_mobile', 'background_color', 'text_color'
+            )
+        }),
+        ('Targeting', {
+            'fields': (
+                'target_audience', 'specific_users', 'display_location'
+            )
+        }),
+        ('Schedule & Priority', {
+            'fields': (
+                'start_date', 'end_date', 'display_priority'
+            )
+        }),
+        ('Call to Action', {
+            'fields': (
+                'cta_text', 'cta_link'
+            )
+        }),
+        ('Offer Details', {
+            'fields': (
+                'discount_code', 'discount_percentage', 'bonus_amount'
+            ),
+            'classes': ('collapse',)
+        }),
+        ('Performance Metrics', {
+            'fields': (
+                'views_count', 'clicks_count', 'conversions_count',
+                'get_ctr', 'get_conversion_rate'
+            ),
+            'classes': ('collapse',)
+        }),
+        ('Settings', {
+            'fields': (
+                'is_active', 'auto_expire', 'show_countdown', 'max_views_per_user'
+            )
+        }),
+        ('Metadata', {
+            'fields': (
+                'created_by', 'created_at', 'updated_at'
+            ),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def get_performance(self, obj):
+        """Display performance summary"""
+        ctr = obj.get_ctr()
+        conversion_rate = obj.get_conversion_rate()
+        return f"Views: {obj.views_count} | CTR: {ctr:.2f}% | Conv: {conversion_rate:.2f}%"
+    get_performance.short_description = 'Performance'
+    
+    def save_model(self, request, obj, form, change):
+        if not change:  # If creating new promotion
+            obj.created_by = request.user
+        super().save_model(request, obj, form, change)
+
+
+@admin.register(PromotionView)
+class PromotionViewAdmin(admin.ModelAdmin):
+    list_display = ['promotion', 'user', 'ip_address', 'viewed_at']
+    list_filter = ['promotion', 'viewed_at']
+    search_fields = ['promotion__promotion_id', 'promotion__title', 'user__username', 'ip_address']
+    readonly_fields = ['promotion', 'user', 'ip_address', 'user_agent', 'viewed_at']
+    
+    def has_add_permission(self, request):
+        return False
+    
+    def has_change_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(PromotionClick)
+class PromotionClickAdmin(admin.ModelAdmin):
+    list_display = ['promotion', 'user', 'ip_address', 'clicked_at']
+    list_filter = ['promotion', 'clicked_at']
+    search_fields = ['promotion__promotion_id', 'promotion__title', 'user__username', 'ip_address']
+    readonly_fields = ['promotion', 'user', 'ip_address', 'clicked_at']
+    
+    def has_add_permission(self, request):
+        return False
+    
+    def has_change_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(PromotionConversion)
+class PromotionConversionAdmin(admin.ModelAdmin):
+    list_display = ['promotion', 'user', 'conversion_type', 'conversion_value', 'converted_at']
+    list_filter = ['promotion', 'conversion_type', 'converted_at']
+    search_fields = ['promotion__promotion_id', 'promotion__title', 'user__username']
+    readonly_fields = ['promotion', 'user', 'conversion_type', 'conversion_value', 'order', 'payment', 'converted_at']
+    
+    def has_add_permission(self, request):
+        return False
+    
+    def has_change_permission(self, request, obj=None):
+        return False

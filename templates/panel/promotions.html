@@ -1,0 +1,237 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Promotions & Offers" %} - VinFlow{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-6">
+    <!-- Header -->
+    <div class="flex justify-between items-center">
+        <div>
+            <h1 class="text-3xl font-bold">{% trans "Promotions & Offers" %}</h1>
+            <p class="text-gray-400 mt-1">{% trans "Check out our latest deals and special offers!" %}</p>
+        </div>
+        <a href="{% url 'dashboard' %}" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm">
+            {% trans "Back to Dashboard" %}
+        </a>
+    </div>
+    
+    {% if promotions %}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for promotion in promotions %}
+        <div class="promotion-card card-glass rounded-xl overflow-hidden hover:scale-105 transition-transform duration-300"
+             data-promotion-id="{{ promotion.promotion_id }}">
+            <!-- Banner Image -->
+            {% if promotion.banner_image %}
+            <div class="relative h-48 overflow-hidden">
+                <img src="{{ promotion.banner_image.url }}" 
+                     alt="{{ promotion.title }}" 
+                     class="w-full h-full object-cover"
+                     onerror="this.style.display='none'">
+                {% if promotion.show_countdown %}
+                <div class="absolute top-2 right-2 bg-black/70 px-3 py-1 rounded-lg">
+                    <div class="countdown-timer text-white text-xs font-bold" 
+                         data-end-date="{{ promotion.end_date|date:'c' }}">
+                        <span class="countdown-days">0</span>d 
+                        <span class="countdown-hours">0</span>h 
+                        <span class="countdown-minutes">0</span>m
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            {% else %}
+            <!-- No image, use background color -->
+            <div class="h-48 flex items-center justify-center" style="background-color: {{ promotion.background_color }};">
+                <h3 class="text-2xl font-bold" style="color: {{ promotion.text_color }};">
+                    {{ promotion.title }}
+                </h3>
+            </div>
+            {% endif %}
+            
+            <!-- Content -->
+            <div class="p-6">
+                <div class="mb-4">
+                    <h3 class="text-xl font-bold mb-2">
+                        {% if is_khmer and promotion.title_km %}{{ promotion.title_km }}{% else %}{{ promotion.title }}{% endif %}
+                    </h3>
+                    {% if promotion.description %}
+                    <p class="text-gray-400 text-sm line-clamp-3">
+                        {% if is_khmer and promotion.description_km %}{{ promotion.description_km }}{% else %}{{ promotion.description }}{% endif %}
+                    </p>
+                    {% endif %}
+                </div>
+                
+                <!-- Offer Details -->
+                <div class="mb-4 space-y-2">
+                    {% if promotion.discount_percentage > 0 %}
+                    <div class="flex items-center gap-2">
+                        <span class="px-3 py-1 bg-green-900/50 text-green-400 rounded-lg text-sm font-bold">
+                            {{ promotion.discount_percentage }}% {% trans "OFF" %}
+                        </span>
+                    </div>
+                    {% endif %}
+                    {% if promotion.bonus_amount > 0 %}
+                    <div class="flex items-center gap-2">
+                        <span class="px-3 py-1 bg-purple-900/50 text-purple-400 rounded-lg text-sm font-bold">
+                            +${{ promotion.bonus_amount|floatformat:2 }} {% trans "BONUS" %}
+                        </span>
+                    </div>
+                    {% endif %}
+                    {% if promotion.discount_code %}
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-gray-500">{% trans "Code:" %}</span>
+                        <span class="px-3 py-1 bg-slate-700 text-cyan-400 rounded-lg text-sm font-mono font-bold">
+                            {{ promotion.discount_code }}
+                        </span>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Call to Action -->
+                {% if promotion.cta_text and promotion.cta_link %}
+                <a href="{{ promotion.cta_link }}" 
+                   class="promotion-cta btn-primary w-full text-center block"
+                   data-promotion-id="{{ promotion.promotion_id }}">
+                    {{ promotion.cta_text }}
+                </a>
+                {% endif %}
+                
+                <!-- Promotion Type Badge -->
+                <div class="mt-4 pt-4 border-t border-slate-700">
+                    <span class="text-xs text-gray-500 uppercase">
+                        {{ promotion.get_promotion_type_display }}
+                    </span>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <!-- Empty State -->
+    <div class="card-glass rounded-xl p-12 text-center">
+        <svg class="w-24 h-24 mx-auto text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"></path>
+        </svg>
+        <h3 class="text-xl font-bold mb-2">{% trans "No Active Promotions" %}</h3>
+        <p class="text-gray-400 mb-6">{% trans "Check back later for exciting offers and deals!" %}</p>
+        <a href="{% url 'services' %}" class="btn-primary inline-block">
+            {% trans "Browse Services" %}
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+// Track promotion views when card is visible
+document.addEventListener('DOMContentLoaded', function() {
+    const promotionCards = document.querySelectorAll('.promotion-card');
+    
+    promotionCards.forEach(card => {
+        const promotionId = card.dataset.promotionId;
+        
+        // Track view when card comes into viewport
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    trackPromotionView(promotionId);
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.5 });
+        
+        observer.observe(card);
+    });
+    
+    // Track clicks on CTA buttons
+    document.querySelectorAll('.promotion-cta').forEach(button => {
+        button.addEventListener('click', function(e) {
+            const promotionId = this.dataset.promotionId;
+            trackPromotionClick(promotionId);
+        });
+    });
+});
+
+// Function to track promotion view
+function trackPromotionView(promotionId) {
+    fetch('/promotions/track-view/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: `promotion_id=${promotionId}`
+    }).catch(err => console.error('Error tracking view:', err));
+}
+
+// Function to track promotion click
+function trackPromotionClick(promotionId) {
+    fetch('/promotions/track-click/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: `promotion_id=${promotionId}`
+    }).catch(err => console.error('Error tracking click:', err));
+}
+
+// Countdown timer function
+function updateCountdowns() {
+    document.querySelectorAll('.countdown-timer').forEach(timer => {
+        const endDate = new Date(timer.dataset.endDate);
+        const now = new Date();
+        const diff = endDate - now;
+        
+        if (diff <= 0) {
+            timer.innerHTML = '<span class="text-red-400">{% trans "EXPIRED" %}</span>';
+            return;
+        }
+        
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        
+        timer.querySelector('.countdown-days').textContent = days;
+        timer.querySelector('.countdown-hours').textContent = hours;
+        timer.querySelector('.countdown-minutes').textContent = minutes;
+    });
+}
+
+// Update countdown every minute
+if (document.querySelectorAll('.countdown-timer').length > 0) {
+    updateCountdowns();
+    setInterval(updateCountdowns, 60000);
+}
+
+// Helper function to get CSRF token
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+
+<style>
+.promotion-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.promotion-card:hover {
+    box-shadow: 0 10px 30px rgba(124, 58, 237, 0.3);
+}
+
+.countdown-timer {
+    font-variant-numeric: tabular-nums;
+}
+</style>
+{% endblock %}
+

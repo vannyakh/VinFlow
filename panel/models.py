@@ -419,3 +419,195 @@ class Notification(models.Model):
     
     def __str__(self):
         return f"{self.title} - {self.user.username if self.user else 'All Users'}"
+
+# Marketing Promotion System
+class MarketingPromotion(models.Model):
+    """
+    Model for managing marketing promotions and campaigns
+    """
+    PROMOTION_TYPES = [
+        ('banner', 'Banner'),
+        ('popup', 'Popup'),
+        ('notification', 'Notification'),
+        ('email', 'Email Campaign'),
+        ('discount', 'Discount Campaign'),
+        ('flash_sale', 'Flash Sale'),
+        ('free_bonus', 'Free Bonus'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('scheduled', 'Scheduled'),
+        ('active', 'Active'),
+        ('paused', 'Paused'),
+        ('completed', 'Completed'),
+        ('cancelled', 'Cancelled'),
+    ]
+    
+    TARGET_AUDIENCE = [
+        ('all', 'All Users'),
+        ('new_users', 'New Users'),
+        ('active_users', 'Active Users'),
+        ('inactive_users', 'Inactive Users'),
+        ('high_spenders', 'High Spenders'),
+        ('resellers', 'Resellers'),
+        ('specific_users', 'Specific Users'),
+    ]
+    
+    DISPLAY_LOCATION = [
+        ('homepage', 'Homepage'),
+        ('dashboard', 'User Dashboard'),
+        ('services', 'Services Page'),
+        ('checkout', 'Checkout Page'),
+        ('all_pages', 'All Pages'),
+    ]
+    
+    promotion_id = models.CharField(max_length=20, unique=True, blank=True)
+    title = models.CharField(max_length=200, help_text="Promotion title")
+    title_km = models.CharField(max_length=200, blank=True, help_text="Khmer translation")
+    description = models.TextField(blank=True, help_text="Promotion description")
+    description_km = models.TextField(blank=True, help_text="Khmer description")
+    
+    promotion_type = models.CharField(max_length=20, choices=PROMOTION_TYPES, default='banner')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+    
+    # Visual elements
+    banner_image = models.ImageField(upload_to='promotions/banners/', blank=True, null=True)
+    banner_image_mobile = models.ImageField(upload_to='promotions/banners/mobile/', blank=True, null=True)
+    background_color = models.CharField(max_length=7, default='#007bff', help_text="Hex color code")
+    text_color = models.CharField(max_length=7, default='#ffffff', help_text="Hex color code")
+    
+    # Targeting
+    target_audience = models.CharField(max_length=20, choices=TARGET_AUDIENCE, default='all')
+    specific_users = models.ManyToManyField(User, blank=True, related_name='targeted_promotions')
+    display_location = models.CharField(max_length=20, choices=DISPLAY_LOCATION, default='homepage')
+    
+    # Timing
+    start_date = models.DateTimeField(help_text="When promotion starts")
+    end_date = models.DateTimeField(help_text="When promotion ends")
+    display_priority = models.IntegerField(default=0, help_text="Higher number = higher priority")
+    
+    # Call to action
+    cta_text = models.CharField(max_length=100, blank=True, help_text="Button text (e.g., 'Shop Now')")
+    cta_link = models.CharField(max_length=500, blank=True, help_text="Button link")
+    
+    # Discount/Offer details (if applicable)
+    discount_code = models.CharField(max_length=50, blank=True, help_text="Associated coupon code")
+    discount_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=0, validators=[MinValueValidator(0), MaxValueValidator(100)])
+    bonus_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text="Free balance bonus")
+    
+    # Performance tracking
+    views_count = models.IntegerField(default=0, help_text="How many times viewed")
+    clicks_count = models.IntegerField(default=0, help_text="How many times clicked")
+    conversions_count = models.IntegerField(default=0, help_text="How many conversions")
+    
+    # Settings
+    is_active = models.BooleanField(default=True)
+    auto_expire = models.BooleanField(default=True, help_text="Auto expire after end_date")
+    show_countdown = models.BooleanField(default=False, help_text="Show countdown timer")
+    max_views_per_user = models.IntegerField(default=0, help_text="0 = unlimited")
+    
+    # Metadata
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_promotions')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-display_priority', '-created_at']
+        verbose_name = "Marketing Promotion"
+        verbose_name_plural = "Marketing Promotions"
+    
+    def save(self, *args, **kwargs):
+        if not self.promotion_id:
+            self.promotion_id = f"PROMO{uuid.uuid4().hex[:8].upper()}"
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"{self.promotion_id} - {self.title}"
+    
+    def is_currently_active(self):
+        """Check if promotion is currently active based on time and status"""
+        from django.utils import timezone
+        now = timezone.now()
+        return (
+            self.is_active and 
+            self.status == 'active' and 
+            self.start_date <= now <= self.end_date
+        )
+    
+    def get_ctr(self):
+        """Calculate Click-Through Rate"""
+        if self.views_count == 0:
+            return 0
+        return (self.clicks_count / self.views_count) * 100
+    
+    def get_conversion_rate(self):
+        """Calculate Conversion Rate"""
+        if self.clicks_count == 0:
+            return 0
+        return (self.conversions_count / self.clicks_count) * 100
+
+
+class PromotionView(models.Model):
+    """
+    Track individual user views of promotions
+    """
+    promotion = models.ForeignKey(MarketingPromotion, on_delete=models.CASCADE, related_name='user_views')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, related_name='promotion_views')
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.TextField(blank=True)
+    viewed_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-viewed_at']
+        verbose_name = "Promotion View"
+        verbose_name_plural = "Promotion Views"
+    
+    def __str__(self):
+        return f"{self.promotion.promotion_id} viewed by {self.user.username if self.user else 'Anonymous'}"
+
+
+class PromotionClick(models.Model):
+    """
+    Track clicks on promotions
+    """
+    promotion = models.ForeignKey(MarketingPromotion, on_delete=models.CASCADE, related_name='user_clicks')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, related_name='promotion_clicks')
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    clicked_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-clicked_at']
+        verbose_name = "Promotion Click"
+        verbose_name_plural = "Promotion Clicks"
+    
+    def __str__(self):
+        return f"{self.promotion.promotion_id} clicked by {self.user.username if self.user else 'Anonymous'}"
+
+
+class PromotionConversion(models.Model):
+    """
+    Track conversions from promotions (orders, sign-ups, deposits)
+    """
+    CONVERSION_TYPES = [
+        ('order', 'Order Placed'),
+        ('deposit', 'Deposit Made'),
+        ('signup', 'User Signup'),
+        ('coupon_used', 'Coupon Used'),
+    ]
+    
+    promotion = models.ForeignKey(MarketingPromotion, on_delete=models.CASCADE, related_name='conversions')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='promotion_conversions')
+    conversion_type = models.CharField(max_length=20, choices=CONVERSION_TYPES)
+    conversion_value = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text="Value of conversion (e.g., order amount)")
+    order = models.ForeignKey('Order', on_delete=models.SET_NULL, null=True, blank=True)
+    payment = models.ForeignKey('Payment', on_delete=models.SET_NULL, null=True, blank=True)
+    converted_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-converted_at']
+        verbose_name = "Promotion Conversion"
+        verbose_name_plural = "Promotion Conversions"
+    
+    def __str__(self):
+        return f"{self.promotion.promotion_id} - {self.conversion_type} by {self.user.username}"

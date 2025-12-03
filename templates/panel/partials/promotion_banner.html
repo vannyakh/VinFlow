@@ -1,0 +1,195 @@
+{% load i18n %}
+{% comment %}
+Reusable promotion banner component
+Usage: {% include 'panel/partials/promotion_banner.html' with location='services' %}
+location options: 'homepage', 'dashboard', 'services', 'checkout', 'all_pages'
+{% endcomment %}
+
+<div id="promotion-banner-container" class="promotion-banner-wrapper" data-location="{{ location|default:'homepage' }}">
+    <!-- Promotions will be loaded here via JavaScript -->
+</div>
+
+<script>
+(function() {
+    const location = '{{ location|default:"homepage" }}';
+    const container = document.getElementById('promotion-banner-container');
+    
+    if (!container) return;
+    
+    // Fetch active promotions for this location
+    fetch(`/promotions/active/?location=${location}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.promotions && data.promotions.length > 0) {
+                container.innerHTML = '';
+                
+                data.promotions.forEach(promo => {
+                    const promoElement = createPromotionElement(promo);
+                    container.appendChild(promoElement);
+                    
+                    // Track view
+                    trackPromotionView(promo.promotion_id);
+                });
+            } else {
+                container.style.display = 'none';
+            }
+        })
+        .catch(err => {
+            console.error('Error loading promotions:', err);
+            container.style.display = 'none';
+        });
+    
+    function createPromotionElement(promo) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'promotion-banner-item mb-4';
+        wrapper.dataset.promotionId = promo.promotion_id;
+        
+        let html = '<div class="card-glass rounded-xl overflow-hidden relative">';
+        
+        // Banner image or colored background
+        if (promo.banner_image) {
+            html += `<div class="relative h-32 md:h-40 overflow-hidden">
+                <img src="${promo.banner_image}" alt="${promo.title}" class="w-full h-full object-cover">
+            </div>`;
+        } else {
+            html += `<div class="h-32 md:h-40 flex items-center justify-center" style="background-color: ${promo.background_color};">
+                <h3 class="text-xl md:text-2xl font-bold px-4 text-center" style="color: ${promo.text_color};">
+                    ${promo.title}
+                </h3>
+            </div>`;
+        }
+        
+        // Countdown timer
+        if (promo.show_countdown && promo.end_date) {
+            html += `<div class="absolute top-2 right-2 bg-black/70 px-3 py-1 rounded-lg">
+                <div class="countdown-timer text-white text-xs font-bold" data-end-date="${promo.end_date}">
+                    <span class="countdown-days">0</span>d 
+                    <span class="countdown-hours">0</span>h 
+                    <span class="countdown-minutes">0</span>m
+                </div>
+            </div>`;
+        }
+        
+        // Content overlay or separate section
+        html += `<div class="p-4 md:p-6">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div class="flex-1">
+                    <h3 class="text-lg md:text-xl font-bold mb-2">${promo.title}</h3>
+                    ${promo.description ? `<p class="text-gray-400 text-sm line-clamp-2">${promo.description}</p>` : ''}
+                </div>`;
+        
+        // CTA Button
+        if (promo.cta_text && promo.cta_link) {
+            html += `<a href="${promo.cta_link}" 
+                        class="promotion-cta btn-primary whitespace-nowrap"
+                        data-promotion-id="${promo.promotion_id}">
+                        ${promo.cta_text}
+                    </a>`;
+        }
+        
+        html += `</div></div></div>`;
+        
+        wrapper.innerHTML = html;
+        return wrapper;
+    }
+    
+    // Track promotion view
+    function trackPromotionView(promotionId) {
+        fetch('/promotions/track-view/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: `promotion_id=${promotionId}`
+        }).catch(err => console.error('Error tracking view:', err));
+    }
+    
+    // Track promotion click
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('promotion-cta')) {
+            const promotionId = e.target.dataset.promotionId;
+            if (promotionId) {
+                fetch('/promotions/track-click/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: `promotion_id=${promotionId}`
+                }).catch(err => console.error('Error tracking click:', err));
+            }
+        }
+    });
+    
+    // Countdown timer function
+    function updateCountdowns() {
+        document.querySelectorAll('.countdown-timer').forEach(timer => {
+            const endDate = new Date(timer.dataset.endDate);
+            const now = new Date();
+            const diff = endDate - now;
+            
+            if (diff <= 0) {
+                timer.innerHTML = '<span class="text-red-400">{% trans "EXPIRED" %}</span>';
+                return;
+            }
+            
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            
+            const daysEl = timer.querySelector('.countdown-days');
+            const hoursEl = timer.querySelector('.countdown-hours');
+            const minutesEl = timer.querySelector('.countdown-minutes');
+            
+            if (daysEl) daysEl.textContent = days;
+            if (hoursEl) hoursEl.textContent = hours;
+            if (minutesEl) minutesEl.textContent = minutes;
+        });
+    }
+    
+    // Update countdown every minute
+    if (document.querySelectorAll('.countdown-timer').length > 0) {
+        updateCountdowns();
+        setInterval(updateCountdowns, 60000);
+    }
+    
+    // Helper function to get CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+})();
+</script>
+
+<style>
+.promotion-banner-wrapper {
+    margin-bottom: 1.5rem;
+}
+
+.promotion-banner-item {
+    animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+</style>
+

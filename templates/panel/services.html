@@ -12,6 +12,9 @@
         </a>
     </div>
     
+    <!-- Promotions Banner -->
+    {% include 'panel/partials/promotion_banner.html' with location='services' %}
+    
     <!-- Service Categories -->
     {% for category, services in services_by_category.items %}
         <div class="card-glass rounded-xl p-6">
