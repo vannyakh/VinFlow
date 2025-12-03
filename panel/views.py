@@ -593,10 +593,15 @@ def new_order(request):
     # Check if user language is Khmer
     is_khmer = request.user.profile.language == 'km' if hasattr(request.user, 'profile') else False
     
+    # Get user balance
+    profile = ensure_user_profile(request.user)
+    user_balance = profile.balance
+    
     context = {
         'categories': categories,
         'services': services,
         'is_khmer': is_khmer,
+        'user_balance': user_balance,
     }
     return render(request, 'panel/new_order.html', context)
 
@@ -618,7 +623,7 @@ def create_order(request):
         # Validate quantity
         if quantity < service.min_order or quantity > service.max_order:
             messages.error(request, f'Quantity must be between {service.min_order} and {service.max_order}')
-            return redirect('services')
+            return redirect('new_order')
         
         # Calculate charge
         charge = (service.rate / 1000) * quantity
@@ -645,9 +650,10 @@ def create_order(request):
         final_charge = max(0, charge - discount)
         
         # Check balance
-        if request.user.profile.balance < final_charge:
-            messages.error(request, 'Insufficient balance. Please top up your account.')
-            return redirect('dashboard')
+        profile = ensure_user_profile(request.user)
+        if profile.balance < final_charge:
+            messages.error(request, f'Insufficient balance. You need ${final_charge:.2f} but only have ${profile.balance:.2f}. Please top up your account.')
+            return redirect('new_order')
         
         # Create order
         order = Order.objects.create(
@@ -676,7 +682,90 @@ def create_order(request):
         
     except Exception as e:
         messages.error(request, f'Error creating order: {str(e)}')
-        return redirect('services')
+        return redirect('new_order')
+
+# Validate Coupon Code (AJAX)
+@login_required
+def validate_coupon(request):
+    """AJAX endpoint to validate coupon code"""
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Invalid method'}, status=405)
+    
+    coupon_code = request.POST.get('coupon_code', '').strip().upper()
+    charge = float(request.POST.get('charge', 0))
+    
+    if not coupon_code:
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Please enter a coupon code',
+            'discount': 0,
+            'final_charge': charge
+        })
+    
+    try:
+        coupon = Coupon.objects.get(code=coupon_code, is_active=True)
+        now = timezone.now()
+        
+        # Check validity period
+        if not (coupon.valid_from <= now <= coupon.valid_until):
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Coupon has expired or is not yet valid',
+                'discount': 0,
+                'final_charge': charge
+            })
+        
+        # Check usage limit
+        if coupon.usage_limit and coupon.used_count >= coupon.usage_limit:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Coupon has reached its usage limit',
+                'discount': 0,
+                'final_charge': charge
+            })
+        
+        # Check minimum purchase
+        if charge < coupon.min_purchase:
+            return JsonResponse({
+                'status': 'error',
+                'message': f'Minimum purchase of ${coupon.min_purchase:.2f} required',
+                'discount': 0,
+                'final_charge': charge
+            })
+        
+        # Calculate discount
+        if coupon.discount_type == 'percent':
+            discount = (charge * coupon.discount_value) / 100
+            if coupon.max_discount:
+                discount = min(discount, coupon.max_discount)
+        else:
+            discount = min(coupon.discount_value, charge)
+        
+        final_charge = max(0, charge - discount)
+        
+        return JsonResponse({
+            'status': 'success',
+            'message': f'Coupon applied! Discount: ${discount:.2f}',
+            'discount': float(discount),
+            'final_charge': float(final_charge),
+            'discount_type': coupon.discount_type,
+            'discount_value': float(coupon.discount_value)
+        })
+        
+    except Coupon.DoesNotExist:
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Invalid coupon code',
+            'discount': 0,
+            'final_charge': charge
+        })
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': f'Error validating coupon: {str(e)}',
+            'discount': 0,
+            'final_charge': charge
+        })
 
 # Orders List
 @login_required
