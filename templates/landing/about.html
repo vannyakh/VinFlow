@@ -1,0 +1,156 @@
+{% load i18n %}
+
+<section id="features" class="py-20 relative">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Section Header -->
+        <div class="text-center mb-16">
+            <span class="text-cyan-400 font-semibold text-sm uppercase tracking-wide">{% trans "Why Choose Us" %}</span>
+            <h2 class="text-4xl md:text-5xl font-bold text-white mt-3 mb-4">
+                {% trans "Features That Set Us Apart" %}
+            </h2>
+            <p class="text-gray-400 text-lg max-w-2xl mx-auto">
+                {% trans "Experience the difference with our premium features designed for your success." %}
+            </p>
+        </div>
+        
+        <!-- Features Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-20">
+            <!-- Feature 1 -->
+            <div class="text-center">
+                <div class="w-20 h-20 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-purple-500/50">
+                    <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
+                </div>
+                <h3 class="text-xl font-bold text-white mb-3">{% trans "Instant Start" %}</h3>
+                <p class="text-gray-400">
+                    {% trans "Orders start processing immediately after payment, with no delays." %}
+                </p>
+            </div>
+            
+            <!-- Feature 2 -->
+            <div class="text-center">
+                <div class="w-20 h-20 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-cyan-500/50">
+                    <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                    </svg>
+                </div>
+                <h3 class="text-xl font-bold text-white mb-3">{% trans "Safe & Secure" %}</h3>
+                <p class="text-gray-400">
+                    {% trans "Your account security is our top priority with SSL encryption." %}
+                </p>
+            </div>
+            
+            <!-- Feature 3 -->
+            <div class="text-center">
+                <div class="w-20 h-20 bg-gradient-to-br from-green-500 to-emerald-500 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-green-500/50">
+                    <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+                <h3 class="text-xl font-bold text-white mb-3">{% trans "Best Prices" %}</h3>
+                <p class="text-gray-400">
+                    {% trans "Most competitive prices in the market without compromising quality." %}
+                </p>
+            </div>
+            
+            <!-- Feature 4 -->
+            <div class="text-center">
+                <div class="w-20 h-20 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-yellow-500/50">
+                    <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                    </svg>
+                </div>
+                <h3 class="text-xl font-bold text-white mb-3">{% trans "24/7 Support" %}</h3>
+                <p class="text-gray-400">
+                    {% trans "Round-the-clock customer support ready to assist you anytime." %}
+                </p>
+            </div>
+        </div>
+        
+        <!-- About Content -->
+        <div id="about" class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mt-20">
+            <!-- Left: Image/Illustration -->
+            <div class="relative">
+                <div class="card-glass rounded-3xl p-8 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-64 h-64 bg-purple-500/20 rounded-full filter blur-3xl"></div>
+                    <div class="absolute bottom-0 left-0 w-64 h-64 bg-cyan-500/20 rounded-full filter blur-3xl"></div>
+                    
+                    <div class="relative z-10">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl p-6 text-white">
+                                <div class="text-4xl font-bold mb-2">99.9%</div>
+                                <div class="text-sm opacity-90">{% trans "Uptime" %}</div>
+                            </div>
+                            <div class="bg-gradient-to-br from-cyan-500 to-blue-500 rounded-2xl p-6 text-white">
+                                <div class="text-4xl font-bold mb-2">10M+</div>
+                                <div class="text-sm opacity-90">{% trans "Orders" %}</div>
+                            </div>
+                            <div class="bg-gradient-to-br from-green-500 to-emerald-500 rounded-2xl p-6 text-white">
+                                <div class="text-4xl font-bold mb-2">50K+</div>
+                                <div class="text-sm opacity-90">{% trans "Users" %}</div>
+                            </div>
+                            <div class="bg-gradient-to-br from-yellow-500 to-orange-500 rounded-2xl p-6 text-white">
+                                <div class="text-4xl font-bold mb-2">20+</div>
+                                <div class="text-sm opacity-90">{% trans "Platforms" %}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right: Content -->
+            <div>
+                <span class="text-purple-400 font-semibold text-sm uppercase tracking-wide">{% trans "About Us" %}</span>
+                <h2 class="text-4xl font-bold text-white mt-3 mb-6">
+                    {% trans "Your Trusted SMM Panel Partner" %}
+                </h2>
+                <p class="text-gray-400 mb-6 leading-relaxed">
+                    {% trans "We are a leading Social Media Marketing panel providing high-quality services to help individuals and businesses grow their online presence. With years of experience in the industry, we understand what it takes to succeed in social media." %}
+                </p>
+                <p class="text-gray-400 mb-8 leading-relaxed">
+                    {% trans "Our platform offers a user-friendly interface, instant delivery, and competitive prices. We are committed to delivering exceptional service and maintaining the highest standards of quality and security." %}
+                </p>
+                
+                <div class="space-y-4">
+                    <div class="flex items-start space-x-4">
+                        <div class="w-12 h-12 bg-purple-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <h4 class="text-white font-semibold mb-1">{% trans "Quality Guarantee" %}</h4>
+                            <p class="text-gray-400 text-sm">{% trans "We ensure all services meet the highest quality standards with real engagement." %}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-start space-x-4">
+                        <div class="w-12 h-12 bg-cyan-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <svg class="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <h4 class="text-white font-semibold mb-1">{% trans "Fast Delivery" %}</h4>
+                            <p class="text-gray-400 text-sm">{% trans "Orders are processed and delivered quickly, often starting within minutes." %}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-start space-x-4">
+                        <div class="w-12 h-12 bg-green-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <svg class="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <h4 class="text-white font-semibold mb-1">{% trans "Affordable Pricing" %}</h4>
+                            <p class="text-gray-400 text-sm">{% trans "Competitive rates that fit any budget without sacrificing quality." %}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+

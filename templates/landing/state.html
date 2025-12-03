@@ -1,0 +1,55 @@
+{% load i18n %}
+
+<section id="stats" class="py-20 relative">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Stats Background -->
+        <div class="card-glass rounded-3xl p-12 relative overflow-hidden">
+            <div class="absolute top-0 right-0 w-96 h-96 bg-purple-500/10 rounded-full filter blur-3xl"></div>
+            <div class="absolute bottom-0 left-0 w-96 h-96 bg-cyan-500/10 rounded-full filter blur-3xl"></div>
+            
+            <div class="relative z-10">
+                <div class="text-center mb-12">
+                    <span class="text-cyan-400 font-semibold text-sm uppercase tracking-wide">{% trans "Our Statistics" %}</span>
+                    <h2 class="text-4xl md:text-5xl font-bold text-white mt-3">
+                        {% trans "Trusted by Thousands" %}
+                    </h2>
+                </div>
+                
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-8">
+                    <!-- Stat 1 -->
+                    <div class="text-center">
+                        <div class="text-5xl md:text-6xl font-extrabold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent mb-2">
+                            50K+
+                        </div>
+                        <div class="text-gray-300 font-medium">{% trans "Active Users" %}</div>
+                    </div>
+                    
+                    <!-- Stat 2 -->
+                    <div class="text-center">
+                        <div class="text-5xl md:text-6xl font-extrabold bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent mb-2">
+                            10M+
+                        </div>
+                        <div class="text-gray-300 font-medium">{% trans "Orders Completed" %}</div>
+                    </div>
+                    
+                    <!-- Stat 3 -->
+                    <div class="text-center">
+                        <div class="text-5xl md:text-6xl font-extrabold bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent mb-2">
+                            99.9%
+                        </div>
+                        <div class="text-gray-300 font-medium">{% trans "Uptime Rate" %}</div>
+                    </div>
+                    
+                    <!-- Stat 4 -->
+                    <div class="text-center">
+                        <div class="text-5xl md:text-6xl font-extrabold bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent mb-2">
+                            24/7
+                        </div>
+                        <div class="text-gray-300 font-medium">{% trans "Support Available" %}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+

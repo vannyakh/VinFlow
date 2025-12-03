@@ -1,0 +1,137 @@
+{% load i18n %}
+{% load settings_tags %}
+{% get_site_setting 'site_name' 'VinFlow' as site_name %}
+
+<section id="home" class="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
+    <!-- Animated Background -->
+    <div class="absolute inset-0 overflow-hidden">
+        <div class="absolute top-20 left-10 w-72 h-72 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
+        <div class="absolute top-40 right-10 w-72 h-72 bg-cyan-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse" style="animation-delay: 2s;"></div>
+        <div class="absolute bottom-20 left-1/2 w-72 h-72 bg-pink-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse" style="animation-delay: 4s;"></div>
+    </div>
+    
+    <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <!-- Left Content -->
+            <div class="text-center lg:text-left">
+                <div class="inline-block mb-6">
+                    <span class="px-4 py-2 bg-purple-500/20 border border-purple-500/30 rounded-full text-purple-300 text-sm font-semibold backdrop-blur-sm">
+                        🚀 {% trans "Premium SMM Services" %}
+                    </span>
+                </div>
+                
+                <h1 class="text-5xl md:text-6xl lg:text-7xl font-extrabold mb-6 leading-tight">
+                    <span class="bg-gradient-to-r from-purple-400 via-pink-400 to-cyan-400 bg-clip-text text-transparent">
+                        {% trans "Boost Your" %}
+                    </span>
+                    <br>
+                    <span class="text-white">{% trans "Social Presence" %}</span>
+                </h1>
+                
+                <p class="text-xl text-gray-300 mb-8 max-w-2xl mx-auto lg:mx-0">
+                    {% trans "Get instant access to the most affordable and reliable SMM panel. Grow your social media followers, likes, views, and engagement effortlessly." %}
+                </p>
+                
+                <div class="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+                    {% if user.is_authenticated %}
+                        <a href="{% url 'dashboard' %}" class="btn-primary inline-flex items-center justify-center space-x-2">
+                            <span>{% trans "Go to Dashboard" %}</span>
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+                            </svg>
+                        </a>
+                    {% else %}
+                        <a href="{% url 'register' %}" class="btn-primary inline-flex items-center justify-center space-x-2">
+                            <span>{% trans "Get Started Free" %}</span>
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+                            </svg>
+                        </a>
+                        <a href="#services" class="btn-secondary inline-flex items-center justify-center space-x-2">
+                            <span>{% trans "View Services" %}</span>
+                        </a>
+                    {% endif %}
+                </div>
+                
+                <!-- Stats -->
+                <div class="grid grid-cols-3 gap-6 mt-12 pt-12 border-t border-slate-700">
+                    <div class="text-center lg:text-left">
+                        <div class="text-3xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">50K+</div>
+                        <div class="text-sm text-gray-400 mt-1">{% trans "Active Users" %}</div>
+                    </div>
+                    <div class="text-center lg:text-left">
+                        <div class="text-3xl font-bold bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">10M+</div>
+                        <div class="text-sm text-gray-400 mt-1">{% trans "Orders Completed" %}</div>
+                    </div>
+                    <div class="text-center lg:text-left">
+                        <div class="text-3xl font-bold bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent">24/7</div>
+                        <div class="text-sm text-gray-400 mt-1">{% trans "Support" %}</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right Content - Illustration -->
+            <div class="relative hidden lg:block">
+                <div class="relative float">
+                    <!-- Card Stack Illustration -->
+                    <div class="relative">
+                        <!-- Card 1 -->
+                        <div class="card-glass rounded-2xl p-6 mb-6 transform rotate-3 hover:rotate-0 transition-transform duration-300">
+                            <div class="flex items-center space-x-4">
+                                <div class="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
+                                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11"></path>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 class="text-white font-semibold">{% trans "Instagram Services" %}</h3>
+                                    <p class="text-gray-400 text-sm">{% trans "Followers, Likes, Views" %}</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Card 2 -->
+                        <div class="card-glass rounded-2xl p-6 mb-6 transform -rotate-3 hover:rotate-0 transition-transform duration-300">
+                            <div class="flex items-center space-x-4">
+                                <div class="w-12 h-12 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-xl flex items-center justify-center">
+                                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5"></path>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 class="text-white font-semibold">{% trans "TikTok Growth" %}</h3>
+                                    <p class="text-gray-400 text-sm">{% trans "Rapid audience expansion" %}</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Card 3 -->
+                        <div class="card-glass rounded-2xl p-6 transform rotate-1 hover:rotate-0 transition-transform duration-300">
+                            <div class="flex items-center space-x-4">
+                                <div class="w-12 h-12 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-xl flex items-center justify-center">
+                                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 class="text-white font-semibold">{% trans "YouTube Boost" %}</h3>
+                                    <p class="text-gray-400 text-sm">{% trans "Views, Subscribers, Likes" %}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Scroll Indicator -->
+    <div class="absolute bottom-10 left-1/2 transform -translate-x-1/2 animate-bounce">
+        <a href="#services" class="text-gray-400 hover:text-white transition">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+            </svg>
+        </a>
+    </div>
+</section>
+

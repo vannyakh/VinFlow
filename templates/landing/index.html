@@ -1,0 +1,18 @@
+{% extends 'landing/base.html' %}
+{% load i18n %}
+{% load settings_tags %}
+{% get_site_setting 'site_name' 'VinFlow' as site_name %}
+
+{% block title %}{{ site_name }} - {% trans "Professional SMM Panel for Social Media Growth" %}{% endblock %}
+
+{% block content %}
+    {% include 'landing/hero.html' %}
+    {% include 'landing/service.html' %}
+    {% include 'landing/how_it_works.html' %}
+    {% include 'landing/about.html' %}
+    {% include 'landing/platforms.html' %}
+    {% include 'landing/testimonials.html' %}
+    {% include 'landing/state.html' %}
+    {% include 'landing/faq.html' %}
+{% endblock %}
+

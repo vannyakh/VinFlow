@@ -477,6 +477,34 @@ def google_callback(request):
         messages.error(request, f'An error occurred during Google authentication: {str(e)}')
         return redirect('login')
 
+
+# Landing Page View
+def landing_page(request):
+    """
+    Landing page view for visitors
+    Redirects logged-in users to dashboard
+    Displays service information and encourages sign-ups for visitors
+    """
+    # Redirect authenticated users to dashboard
+    if request.user.is_authenticated:
+        return redirect('dashboard')
+    
+    return render(request, 'landing/index.html')
+
+
+# Home/Root View - Smart redirect
+def home(request):
+    """
+    Smart home view that redirects based on authentication status
+    - Not logged in: Show landing page
+    - Logged in: Redirect to dashboard
+    """
+    if request.user.is_authenticated:
+        return redirect('dashboard')
+    else:
+        return render(request, 'landing/index.html')
+
+
 # Dashboard
 @login_required
 def dashboard(request):
@@ -3161,3 +3189,4 @@ def check_payment_status(request, payment_id):
             'status': 'error',
             'message': 'Payment not found'
         }, status=404)
+

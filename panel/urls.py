@@ -3,7 +3,14 @@ from . import views
 from . import api_views
 
 urlpatterns = [
-    path('', views.dashboard, name='dashboard'),
+    # Smart Home - Landing for visitors, Dashboard for logged-in users
+    path('', views.home, name='home'),
+    
+    # Landing Page (Public - explicit URL)
+    path('landing/', views.landing_page, name='landing'),
+    
+    # Dashboard (Requires login)
+    path('panel/', views.dashboard, name='dashboard'),
     path('maintenance/', views.maintenance, name='maintenance'),
     path('services/', views.services, name='services'),
     path('orders/', views.orders, name='orders'),
