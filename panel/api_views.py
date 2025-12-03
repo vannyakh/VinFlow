@@ -166,6 +166,7 @@ class APIOrdersView(APIView):
             data.append({
                 'order_id': order.order_id,
                 'service': order.service.name,
+                'platform': order.get_platform_display(),
                 'link': order.link,
                 'quantity': order.quantity,
                 'charge': float(order.charge),
@@ -190,6 +191,7 @@ class APIOrderStatusView(APIView):
                 'order': {
                     'order_id': order.order_id,
                     'service': order.service.name,
+                    'platform': order.get_platform_display(),
                     'link': order.link,
                     'quantity': order.quantity,
                     'charge': float(order.charge),

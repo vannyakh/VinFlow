@@ -55,8 +55,11 @@ class ServiceCategory(models.Model):
 class Service(models.Model):
     CATEGORY_CHOICES = [
         ('ig', 'Instagram'), ('fb', 'Facebook'), ('tt', 'TikTok'), 
-        ('yt', 'YouTube'), ('tw', 'Twitter'), ('sh', 'Shopee'), 
-        ('tg', 'Telegram'), ('other', 'Other')
+        ('yt', 'YouTube'), ('tw', 'Twitter/X'), ('sp', 'Spotify'),
+        ('li', 'LinkedIn'), ('dc', 'Discord'), ('sc', 'Snapchat'),
+        ('twitch', 'Twitch'), ('tg', 'Telegram'), ('google', 'Google'),
+        ('sh', 'Shopee'), ('web', 'Website Traffic'), ('review', 'Reviews'),
+        ('other', 'Others')
     ]
     
     name = models.CharField(max_length=200)
@@ -92,9 +95,19 @@ class Order(models.Model):
         ('Refunded', 'Refunded'),
     ]
     
+    PLATFORM_CHOICES = [
+        ('ig', 'Instagram'), ('fb', 'Facebook'), ('tt', 'TikTok'), 
+        ('yt', 'YouTube'), ('tw', 'Twitter/X'), ('sp', 'Spotify'),
+        ('li', 'LinkedIn'), ('dc', 'Discord'), ('sc', 'Snapchat'),
+        ('twitch', 'Twitch'), ('tg', 'Telegram'), ('google', 'Google'),
+        ('sh', 'Shopee'), ('web', 'Website Traffic'), ('review', 'Reviews'),
+        ('other', 'Others')
+    ]
+    
     order_id = models.CharField(max_length=20, unique=True, blank=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders')
     service = models.ForeignKey(Service, on_delete=models.CASCADE)
+    platform = models.CharField(max_length=20, choices=PLATFORM_CHOICES, default='other')
     link = models.URLField()
     quantity = models.IntegerField()
     charge = models.DecimalField(max_digits=10, decimal_places=2)
@@ -126,6 +139,9 @@ class Order(models.Model):
     def save(self, *args, **kwargs):
         if not self.order_id:
             self.order_id = f"ORD{self.id or uuid.uuid4().hex[:8].upper()}"
+        # Auto-populate platform from service if not set
+        if not self.platform and self.service:
+            self.platform = self.service.service_type
         super().save(*args, **kwargs)
 
     class Meta:

@@ -149,3 +149,5 @@ cython_debug/
 local_settings.py
 local.py
 *.local.py
+
+dump.rdb

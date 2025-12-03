@@ -638,12 +638,19 @@ def orders(request):
     
     # Filtering
     status_filter = request.GET.get('status', '')
+    platform_filter = request.GET.get('platform', '')
+    
     if status_filter:
         orders_list = orders_list.filter(status=status_filter)
+    
+    if platform_filter:
+        orders_list = orders_list.filter(platform=platform_filter)
     
     context = {
         'orders': orders_list,
         'status_filter': status_filter,
+        'platform_filter': platform_filter,
+        'platform_choices': Order.PLATFORM_CHOICES,
     }
     return render(request, 'panel/orders.html', context)
 
@@ -1300,12 +1307,16 @@ def admin_reports(request):
 @admin_required
 def admin_orders(request):
     status_filter = request.GET.get('status', '')
+    platform_filter = request.GET.get('platform', '')
     search = request.GET.get('search', '')
     
     orders = Order.objects.select_related('service', 'user').all()
     
     if status_filter:
         orders = orders.filter(status=status_filter)
+    
+    if platform_filter:
+        orders = orders.filter(platform=platform_filter)
     
     if search:
         orders = orders.filter(
@@ -1320,7 +1331,9 @@ def admin_orders(request):
     context = {
         'orders': orders,
         'status_filter': status_filter,
+        'platform_filter': platform_filter,
         'search': search,
+        'platform_choices': Order.PLATFORM_CHOICES,
         'pending_tickets_count': Ticket.objects.filter(status__in=['open', 'in_progress']).count(),
     }
     return render(request, 'panel/admin/orders.html', context)

@@ -25,8 +25,8 @@ class ServiceAdmin(admin.ModelAdmin):
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ['order_id', 'user', 'service', 'quantity', 'charge', 'status', 'created_at']
-    list_filter = ['status', 'created_at', 'service']
+    list_display = ['order_id', 'user', 'service', 'platform', 'quantity', 'charge', 'status', 'created_at']
+    list_filter = ['status', 'platform', 'created_at', 'service']
     search_fields = ['order_id', 'user__username', 'link']
     readonly_fields = ['order_id', 'created_at', 'updated_at']
 
