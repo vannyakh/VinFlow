@@ -39,6 +39,7 @@
                         <th class="text-left py-3 px-4">{% trans "Charge" %}</th>
                         <th class="text-left py-3 px-4">{% trans "Status" %}</th>
                         <th class="text-left py-3 px-4">{% trans "Date" %}</th>
+                        <th class="text-left py-3 px-4">{% trans "Actions" %}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -69,10 +70,19 @@
                             </span>
                         </td>
                         <td class="py-3 px-4 text-sm text-gray-400">{{ order.created_at|date:"M d, Y" }}</td>
+                        <td class="py-3 px-4">
+                            <button data-order-id="{{ order.id }}" class="view-details-btn px-3 py-1 bg-cyan-600 hover:bg-cyan-500 active:bg-cyan-700 rounded text-xs transition flex items-center gap-1 whitespace-nowrap">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                </svg>
+                                {% trans "Details" %}
+                            </button>
+                        </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="9" class="py-8 text-center text-gray-400">{% trans "No orders found" %}</td>
+                        <td colspan="10" class="py-8 text-center text-gray-400">{% trans "No orders found" %}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -80,5 +90,120 @@
         </div>
     </div>
 </div>
+
+<!-- Order Details Modal -->
+<div id="orderDetailsModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+    <div class="bg-slate-800 rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
+        <!-- Modal Header -->
+        <div class="flex justify-between items-center p-6 border-b border-slate-700">
+            <h2 class="text-2xl font-bold flex items-center gap-2">
+                <svg class="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                {% trans "Order Details & Activity Logs" %}
+            </h2>
+            <button onclick="closeOrderDetails()" class="text-gray-400 hover:text-white transition">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+        
+        <!-- Modal Content -->
+        <div id="orderDetailsContent" class="flex-1 overflow-y-auto p-6">
+            <div class="flex items-center justify-center py-12">
+                <div class="animate-spin rounded-full h-12 w-12 border-4 border-purple-500 border-t-transparent"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Event delegation for view details buttons
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.view-details-btn')) {
+            const button = e.target.closest('.view-details-btn');
+            const orderId = button.dataset.orderId;
+            viewOrderDetails(orderId);
+        }
+    });
+});
+
+function viewOrderDetails(orderId) {
+    const modal = document.getElementById('orderDetailsModal');
+    const content = document.getElementById('orderDetailsContent');
+    
+    // Show modal - add flex and remove hidden
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
+    
+    // Show loading state
+    content.innerHTML = '<div class="flex items-center justify-center py-12">' +
+        '<div class="animate-spin rounded-full h-12 w-12 border-4 border-purple-500 border-t-transparent"></div>' +
+        '</div>';
+    
+    // Fetch order details
+    fetch('/admin/orders/' + orderId + '/details/')
+        .then(response => {
+            console.log('Response status:', response.status);
+            if (!response.ok) {
+                return response.text().then(text => {
+                    throw new Error('Server returned ' + response.status + ': ' + text);
+                });
+            }
+            return response.text();
+        })
+        .then(html => {
+            content.innerHTML = html;
+        })
+        .catch(error => {
+            console.error('Error fetching order details:', error);
+            content.innerHTML = '<div class="text-center py-12 px-6">' +
+                '<svg class="w-16 h-16 mx-auto mb-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+                '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>' +
+                '</svg>' +
+                '<p class="text-red-400 text-lg font-semibold mb-2">{% trans "Error loading order details" %}</p>' +
+                '<p class="text-gray-400 text-sm">' + error.message + '</p>' +
+                '<button onclick="closeOrderDetails()" class="mt-4 px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm">{% trans "Close" %}</button>' +
+                '</div>';
+        });
+}
+
+function closeOrderDetails() {
+    const modal = document.getElementById('orderDetailsModal');
+    modal.classList.add('hidden');
+    modal.style.display = 'none';
+}
+
+// Close modal on ESC key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeOrderDetails();
+    }
+});
+
+// Close modal on backdrop click
+document.getElementById('orderDetailsModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeOrderDetails();
+    }
+});
+</script>
+
+<style>
+#orderDetailsModal {
+    animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+</style>
 {% endblock %}
 

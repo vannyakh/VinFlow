@@ -99,6 +99,80 @@
         </div>
     </div>
     {% endif %}
+    
+    <!-- Order Activity Logs -->
+    <div class="card-glass rounded-xl p-6">
+        <div class="flex items-center gap-2 mb-6">
+            <svg class="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+            <h2 class="text-2xl font-bold">{% trans "Activity Logs" %}</h2>
+        </div>
+        
+        {% if logs %}
+        <div class="space-y-3">
+            {% for log in logs %}
+            <div class="border-l-4 {% if log.log_type == 'created' %}border-green-500{% elif log.log_type == 'error' %}border-red-500{% elif log.log_type == 'status_change' %}border-yellow-500{% elif log.log_type == 'api_call' or log.log_type == 'api_response' %}border-blue-500{% else %}border-gray-500{% endif %} bg-slate-800/30 p-4 rounded-r-lg hover:bg-slate-800/50 transition">
+                <div class="flex items-start justify-between flex-wrap gap-2">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="px-2 py-1 rounded text-xs font-medium
+                                {% if log.log_type == 'created' %}bg-green-900/50 text-green-400
+                                {% elif log.log_type == 'error' %}bg-red-900/50 text-red-400
+                                {% elif log.log_type == 'status_change' %}bg-yellow-900/50 text-yellow-400
+                                {% elif log.log_type == 'balance_deducted' %}bg-purple-900/50 text-purple-400
+                                {% elif log.log_type == 'api_call' or log.log_type == 'api_response' %}bg-blue-900/50 text-blue-400
+                                {% elif log.log_type == 'refund' %}bg-cyan-900/50 text-cyan-400
+                                {% else %}bg-slate-700 text-gray-300{% endif %}">
+                                {{ log.get_log_type_display }}
+                            </span>
+                            <span class="text-xs text-gray-400">
+                                {{ log.created_at|date:"M d, Y H:i:s" }}
+                            </span>
+                        </div>
+                        
+                        <p class="text-gray-300 mb-2">{{ log.message }}</p>
+                        
+                        {% if log.old_value and log.new_value %}
+                        <div class="text-sm">
+                            <span class="text-gray-400">{% trans "Changed from" %}:</span>
+                            <span class="text-red-400">{{ log.old_value }}</span>
+                            <span class="text-gray-400">→</span>
+                            <span class="text-green-400">{{ log.new_value }}</span>
+                        </div>
+                        {% endif %}
+                        
+                        {% if log.details %}
+                        <details class="mt-2">
+                            <summary class="cursor-pointer text-sm text-cyan-400 hover:text-cyan-300">
+                                {% trans "View Details" %}
+                            </summary>
+                            <div class="mt-2 bg-slate-900/50 rounded p-3 overflow-x-auto">
+                                <pre class="text-xs text-gray-300">{{ log.details|safe }}</pre>
+                            </div>
+                        </details>
+                        {% endif %}
+                        
+                        {% if log.performed_by %}
+                        <p class="text-xs text-gray-500 mt-2">
+                            {% trans "Performed by" %}: {{ log.performed_by.username }}
+                            {% if log.ip_address %}({{ log.ip_address }}){% endif %}
+                        </p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-8 text-gray-400">
+            <svg class="w-16 h-16 mx-auto mb-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+            <p>{% trans "No activity logs yet" %}</p>
+        </div>
+        {% endif %}
+    </div>
 </div>
 {% endblock %}
 

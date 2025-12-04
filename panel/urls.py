@@ -42,6 +42,7 @@ urlpatterns = [
     path('admin/statistics/', views.admin_statistics, name='admin_statistics'),
     path('admin/reports/', views.admin_reports, name='admin_reports'),
     path('admin/orders/', views.admin_orders, name='admin_orders'),
+    path('admin/orders/<int:order_id>/details/', views.admin_order_details, name='admin_order_details'),
     path('admin/dripfeed/', views.admin_dripfeed, name='admin_dripfeed'),
     path('admin/subscriptions/', views.admin_subscriptions, name='admin_subscriptions'),
     path('admin/cancel/', views.admin_cancel, name='admin_cancel'),

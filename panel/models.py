@@ -234,6 +234,52 @@ class Order(models.Model):
     class Meta:
         ordering = ['-created_at']
 
+# Order Activity Logs
+class OrderLog(models.Model):
+    """
+    Detailed logging system for tracking all order-related activities
+    """
+    LOG_TYPES = [
+        ('created', 'Order Created'),
+        ('status_change', 'Status Changed'),
+        ('api_call', 'API Call to Supplier'),
+        ('api_response', 'API Response Received'),
+        ('balance_deducted', 'Balance Deducted'),
+        ('refund', 'Refund Processed'),
+        ('error', 'Error Occurred'),
+        ('fraud_check', 'Fraud Check'),
+        ('manual_update', 'Manual Update'),
+        ('system', 'System Event'),
+    ]
+    
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='logs')
+    log_type = models.CharField(max_length=20, choices=LOG_TYPES)
+    message = models.TextField()
+    details = models.JSONField(default=dict, blank=True)  # Store additional data
+    
+    # Optional fields for specific log types
+    old_value = models.CharField(max_length=255, blank=True)
+    new_value = models.CharField(max_length=255, blank=True)
+    
+    # Who performed the action (if manual)
+    performed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='order_actions')
+    
+    # IP and user agent for tracking
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.TextField(blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['order', '-created_at']),
+            models.Index(fields=['log_type']),
+        ]
+    
+    def __str__(self):
+        return f"{self.order.order_id} - {self.get_log_type_display()} - {self.created_at}"
+
 # Subscription Packages
 class SubscriptionPackage(models.Model):
     name = models.CharField(max_length=200)

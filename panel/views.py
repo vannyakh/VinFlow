@@ -32,7 +32,7 @@ import stripe
 import requests
 
 from .models import (
-    UserProfile, Service, ServiceCategory, Order, SubscriptionPackage,
+    UserProfile, Service, ServiceCategory, Order, OrderLog, SubscriptionPackage,
     UserSubscription, Coupon, Payment, Ticket, TicketMessage,
     AffiliateCommission, BlogPost, BlacklistIP, BlacklistLink, BlacklistEmail,
     SystemSetting, Notification, MarketingPromotion, PromotionView,
@@ -77,6 +77,49 @@ def ensure_user_profile(user):
         role = 'admin' if user.is_superuser else 'user'
         profile = UserProfile.objects.create(user=user, role=role)
         return profile
+
+# Helper function to create order logs
+def create_order_log(order, log_type, message, details=None, old_value=None, new_value=None, user=None, request=None):
+    """
+    Create a detailed log entry for an order
+    
+    Args:
+        order: Order instance
+        log_type: Type of log (from OrderLog.LOG_TYPES)
+        message: Human-readable message
+        details: Dictionary with additional information
+        old_value: Previous value (for status changes)
+        new_value: New value (for status changes)
+        user: User who performed the action (optional)
+        request: HTTP request object to capture IP and user agent (optional)
+    """
+    log_data = {
+        'order': order,
+        'log_type': log_type,
+        'message': message,
+        'details': details or {},
+        'old_value': old_value or '',
+        'new_value': new_value or '',
+        'performed_by': user,
+    }
+    
+    # Extract IP and user agent from request if available
+    if request:
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            log_data['ip_address'] = x_forwarded_for.split(',')[0].strip()
+        else:
+            log_data['ip_address'] = request.META.get('REMOTE_ADDR')
+        log_data['user_agent'] = request.META.get('HTTP_USER_AGENT', '')[:500]
+    
+    try:
+        return OrderLog.objects.create(**log_data)
+    except Exception as e:
+        # Log the error but don't break the main flow
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Failed to create order log: {str(e)}")
+        return None
 
 # Language switching - Enhanced with Django i18n
 @require_http_methods(["POST"])
@@ -695,14 +738,52 @@ def get_services_by_category(request):
 @require_http_methods(["POST"])
 def create_order(request):
     try:
-        service_id = request.POST.get('service_id')
-        link = request.POST.get('link')
-        quantity = int(request.POST.get('quantity', 0))
-        drip_feed = request.POST.get('drip_feed') == 'on'
-        drip_feed_quantity = int(request.POST.get('drip_feed_quantity', 0))
-        drip_feed_days = int(request.POST.get('drip_feed_days', 0))
-        coupon_code = request.POST.get('coupon_code', '')
+        # Safely get and validate service_id
+        service_id = request.POST.get('service_id', '').strip()
+        if not service_id:
+            messages.error(request, 'Please select a service')
+            return redirect('new_order')
         
+        # Safely get other fields
+        link = request.POST.get('link', '').strip()
+        if not link:
+            messages.error(request, 'Please provide a link')
+            return redirect('new_order')
+        
+        # Safely convert quantity to int
+        quantity_str = request.POST.get('quantity', '').strip()
+        if not quantity_str:
+            messages.error(request, 'Please enter a quantity')
+            return redirect('new_order')
+        
+        try:
+            quantity = int(quantity_str)
+        except (ValueError, TypeError):
+            messages.error(request, 'Invalid quantity value')
+            return redirect('new_order')
+        
+        # Drip feed settings
+        drip_feed = request.POST.get('drip_feed') == 'on'
+        
+        # Safely convert drip feed values
+        drip_feed_quantity = 0
+        drip_feed_days = 0
+        if drip_feed:
+            drip_feed_quantity_str = request.POST.get('drip_feed_quantity', '').strip()
+            drip_feed_days_str = request.POST.get('drip_feed_days', '').strip()
+            
+            try:
+                if drip_feed_quantity_str:
+                    drip_feed_quantity = int(drip_feed_quantity_str)
+                if drip_feed_days_str:
+                    drip_feed_days = int(drip_feed_days_str)
+            except (ValueError, TypeError):
+                messages.error(request, 'Invalid drip feed values')
+                return redirect('new_order')
+        
+        coupon_code = request.POST.get('coupon_code', '').strip()
+        
+        # Get service
         service = get_object_or_404(Service, id=service_id, is_active=True)
         
         # Validate quantity
@@ -752,14 +833,65 @@ def create_order(request):
             drip_feed_days=drip_feed_days if drip_feed else 0,
         )
         
+        # Log order creation
+        creation_details = {
+            'service': service.name,
+            'service_id': str(service.id),
+            'link': link,
+            'quantity': quantity,
+            'rate': float(service.rate),
+            'charge': float(charge),
+            'discount': float(discount),
+            'final_charge': float(final_charge),
+            'drip_feed': drip_feed,
+            'coupon_used': coupon_code if coupon_code else None,
+        }
+        create_order_log(
+            order=order,
+            log_type='created',
+            message=f'Order created by {request.user.username}',
+            details=creation_details,
+            user=request.user,
+            request=request
+        )
+        
         # Ensure profile exists and deduct balance
         profile = ensure_user_profile(request.user)
+        old_balance = profile.balance
         profile.balance -= final_charge
         profile.total_spent += final_charge
         profile.save()
         
+        # Log balance deduction
+        create_order_log(
+            order=order,
+            log_type='balance_deducted',
+            message=f'Balance deducted: ${final_charge:.2f}',
+            details={
+                'old_balance': float(old_balance),
+                'amount_deducted': float(final_charge),
+                'new_balance': float(profile.balance),
+            },
+            old_value=f'${old_balance:.2f}',
+            new_value=f'${profile.balance:.2f}',
+            user=request.user,
+            request=request
+        )
+        
         # Place order to supplier (async)
         from .tasks import place_order_to_supplier, execute_task_async_or_sync
+        
+        # Log API call initiation
+        create_order_log(
+            order=order,
+            log_type='api_call',
+            message='Initiating API call to supplier',
+            details={
+                'service_external_id': service.external_service_id,
+                'async': True,
+            }
+        )
+        
         execute_task_async_or_sync(place_order_to_supplier, order.id)
         
         messages.success(request, f'Order #{order.order_id} created successfully!')
@@ -879,11 +1011,17 @@ def orders(request):
 @login_required
 def order_detail(request, order_id):
     order = get_object_or_404(
-        Order.objects.select_related('service'),
+        Order.objects.select_related('service').prefetch_related('logs__performed_by'),
         id=order_id,
         user=request.user
     )
-    return render(request, 'panel/partials/order_detail.html', {'order': order})
+    # Get all logs for this order
+    logs = order.logs.all()
+    
+    return render(request, 'panel/partials/order_detail.html', {
+        'order': order,
+        'logs': logs
+    })
 
 # Real-time Order Status (HTMX polling)
 @login_required
@@ -1475,6 +1613,14 @@ def admin_required(view_func):
     @wraps(view_func)
     def wrapper(request, *args, **kwargs):
         if not request.user.is_authenticated:
+            # For AJAX requests, return JSON error instead of redirect
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.path.endswith('/details/'):
+                return HttpResponse(
+                    '<div class="text-center py-12">'
+                    '<p class="text-red-400">Authentication required</p>'
+                    '</div>',
+                    status=401
+                )
             messages.error(request, 'Access denied')
             return redirect('dashboard')
         
@@ -1483,6 +1629,14 @@ def admin_required(view_func):
         
         # Allow access if user is superuser OR has admin role
         if not (request.user.is_superuser or profile.role == 'admin'):
+            # For AJAX requests, return error instead of redirect
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.path.endswith('/details/'):
+                return HttpResponse(
+                    '<div class="text-center py-12">'
+                    '<p class="text-red-400">Admin access required</p>'
+                    '</div>',
+                    status=403
+                )
             messages.error(request, 'Access denied')
             return redirect('dashboard')
         return view_func(request, *args, **kwargs)
@@ -1568,6 +1722,69 @@ def admin_orders(request):
         'pending_tickets_count': Ticket.objects.filter(status__in=['open', 'in_progress']).count(),
     }
     return render(request, 'panel/admin/orders.html', context)
+
+# Admin Order Details with Logs
+@login_required
+@admin_required
+def admin_order_details(request, order_id):
+    """Admin view for detailed order information with activity logs"""
+    try:
+        order = get_object_or_404(
+            Order.objects.select_related('service', 'user', 'service__category', 'service__category__social_network'),
+            id=order_id
+        )
+        
+        # Get all logs for this order, ordered by most recent first
+        # Handle case where OrderLog table might not exist yet (migration not run)
+        try:
+            logs = order.logs.all().order_by('-created_at')
+            
+            # Calculate some statistics
+            log_stats = {
+                'total_logs': logs.count(),
+                'api_calls': logs.filter(log_type='api_call').count(),
+                'status_changes': logs.filter(log_type='status_change').count(),
+                'errors': logs.filter(log_type='error').count(),
+            }
+        except Exception as e:
+            # If logs table doesn't exist or there's an error, continue without logs
+            logs = []
+            log_stats = {
+                'total_logs': 0,
+                'api_calls': 0,
+                'status_changes': 0,
+                'errors': 0,
+            }
+            # Log the error for debugging
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Could not fetch logs for order {order_id}: {str(e)}")
+        
+        context = {
+            'order': order,
+            'logs': logs,
+            'log_stats': log_stats,
+        }
+        
+        # Return partial template for AJAX request
+        return render(request, 'panel/admin/partials/order_details_content.html', context)
+        
+    except Exception as e:
+        # Return error response
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error loading order details for order {order_id}: {str(e)}")
+        
+        return HttpResponse(
+            f'<div class="text-center py-12">'
+            f'<svg class="w-16 h-16 mx-auto mb-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">'
+            f'<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>'
+            f'</svg>'
+            f'<p class="text-red-400">Error loading order details</p>'
+            f'<p class="text-gray-400 text-sm mt-2">{str(e)}</p>'
+            f'</div>',
+            status=500
+        )
 
 # Admin Dripfeed Management
 @login_required

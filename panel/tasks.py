@@ -7,6 +7,23 @@ from .settings_utils import get_setting
 
 logger = logging.getLogger(__name__)
 
+# Helper to create order logs without circular imports
+def create_log(order, log_type, message, details=None, old_value=None, new_value=None):
+    """Create order log entry - helper function for tasks"""
+    from .models import OrderLog
+    try:
+        return OrderLog.objects.create(
+            order=order,
+            log_type=log_type,
+            message=message,
+            details=details or {},
+            old_value=old_value or '',
+            new_value=new_value or '',
+        )
+    except Exception as e:
+        logger.error(f"Failed to create order log: {str(e)}")
+        return None
+
 def execute_task_async_or_sync(task_func, *args, **kwargs):
     """
     Execute a Celery task asynchronously if Celery/Redis is available,
@@ -49,7 +66,8 @@ def execute_task_async_or_sync(task_func, *args, **kwargs):
 
 @shared_task
 def place_order_to_supplier(order_id):
-    from .models import Order
+    from .models import Order, OrderLog
+    
     try:
         order = Order.objects.get(id=order_id)
         service = order.service
@@ -76,6 +94,21 @@ def place_order_to_supplier(order_id):
         timeout = int(get_setting('supplier_timeout', '30'))
         retry_attempts = int(get_setting('supplier_retry_attempts', '3'))
         
+        # Log API call details
+        create_log(
+            order=order,
+            log_type='api_call',
+            message=f'Sending order to supplier API (Attempt 1/{retry_attempts})',
+            details={
+                'api_url': jap_url,
+                'service_external_id': service.external_service_id,
+                'quantity': order.quantity,
+                'drip_feed': order.drip_feed,
+                'timeout': timeout,
+                'max_retries': retry_attempts,
+            }
+        )
+        
         # Send request with retry logic
         response = None
         data = {}
@@ -84,19 +117,69 @@ def place_order_to_supplier(order_id):
                 response = requests.post(jap_url, data=payload, timeout=timeout)
                 data = response.json()
                 
+                # Log API response
+                create_log(
+                    order=order,
+                    log_type='api_response',
+                    message=f'Received response from supplier (Attempt {attempt + 1}/{retry_attempts})',
+                    details={
+                        'status_code': response.status_code,
+                        'response_data': data,
+                        'attempt': attempt + 1,
+                    }
+                )
+                
                 if response.status_code == 200 and 'order' in data:
+                    old_status = order.status
                     order.external_order_id = str(data.get('order', ''))
                     order.status = 'Processing'
                     order.supplier_response = data
                     order.save()
+                    
+                    # Log successful order placement
+                    create_log(
+                        order=order,
+                        log_type='status_change',
+                        message='Order successfully placed with supplier',
+                        details={
+                            'external_order_id': order.external_order_id,
+                            'supplier_response': data,
+                        },
+                        old_value=old_status,
+                        new_value='Processing'
+                    )
+                    
                     logger.info(f"Order {order.order_id} placed successfully with supplier")
                     return
                 elif attempt < retry_attempts - 1:
                     logger.warning(f"Attempt {attempt + 1} failed for order {order.order_id}, retrying...")
+                    
+                    # Log retry
+                    create_log(
+                        order=order,
+                        log_type='system',
+                        message=f'Retry attempt {attempt + 2}/{retry_attempts}',
+                        details={
+                            'reason': 'Previous attempt failed',
+                            'response': data,
+                        }
+                    )
                     continue
                 else:
                     break
             except Exception as e:
+                # Log API error
+                create_log(
+                    order=order,
+                    log_type='error',
+                    message=f'API call failed (Attempt {attempt + 1}/{retry_attempts}): {str(e)}',
+                    details={
+                        'error_type': type(e).__name__,
+                        'error_message': str(e),
+                        'attempt': attempt + 1,
+                    }
+                )
+                
                 if attempt < retry_attempts - 1:
                     logger.warning(f"Attempt {attempt + 1} failed for order {order.order_id}: {str(e)}, retrying...")
                     continue
@@ -106,9 +189,24 @@ def place_order_to_supplier(order_id):
                     break
         
         # If we get here, all attempts failed
+        old_status = order.status
         order.status = 'Canceled'
         order.supplier_response = data
         order.save()
+        
+        # Log order cancellation
+        create_log(
+            order=order,
+            log_type='status_change',
+            message=f'Order canceled after {retry_attempts} failed attempts',
+            details={
+                'reason': 'All API attempts failed',
+                'last_error': data,
+            },
+            old_value=old_status,
+            new_value='Canceled'
+        )
+        
         logger.error(f"Failed to place order {order.order_id} after {retry_attempts} attempts: {data}")
             
     except Exception as e:
@@ -124,6 +222,7 @@ def place_order_to_supplier(order_id):
 def sync_order_status(order_id):
     """Sync order status from JAP API"""
     from .models import Order
+    
     try:
         order = Order.objects.get(id=order_id)
         if not order.external_order_id:
@@ -163,11 +262,40 @@ def sync_order_status(order_id):
             }
             
             supplier_status = data.get('status', '').title()
+            old_status = order.status
+            old_start_count = order.start_count
+            old_remains = order.remains
+            
             order.status = status_map.get(supplier_status, order.status)
             order.start_count = int(data.get('start_count', order.start_count))
             order.remains = int(data.get('remains', order.remains))
             order.supplier_response = data
             order.save()
+            
+            # Log status sync
+            status_changed = old_status != order.status
+            counts_changed = (old_start_count != order.start_count or old_remains != order.remains)
+            
+            if status_changed or counts_changed:
+                create_log(
+                    order=order,
+                    log_type='status_change' if status_changed else 'system',
+                    message=f'Status synced from supplier: {order.status}',
+                    details={
+                        'supplier_status': supplier_status,
+                        'start_count': order.start_count,
+                        'remains': order.remains,
+                        'supplier_data': data,
+                        'changes': {
+                            'status_changed': status_changed,
+                            'start_count_changed': old_start_count != order.start_count,
+                            'remains_changed': old_remains != order.remains,
+                        }
+                    },
+                    old_value=old_status,
+                    new_value=order.status
+                )
+            
             logger.info(f"Order {order.order_id} status synced: {order.status}")
             
     except Exception as e:

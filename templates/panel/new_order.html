@@ -876,14 +876,25 @@ function selectService(element) {
     element.classList.add('selected');
     selectedService = element;
     
-    // Set values
+    // Set values with validation
     const serviceId = element.dataset.serviceId;
+    if (!serviceId) {
+        console.error('No service ID found');
+        return;
+    }
+    
     const rate = parseFloat(element.dataset.rate);
     const min = parseInt(element.dataset.min);
     const max = parseInt(element.dataset.max);
-    const dripEnabled = element.dataset.drip === 'true';
+    const dripEnabled = element.dataset.drip === 'true' || element.dataset.drip === true;
     
-    document.getElementById('service_id').value = serviceId;
+    // Set service ID in hidden field
+    const serviceIdField = document.getElementById('service_id');
+    if (serviceIdField) {
+        serviceIdField.value = serviceId;
+        console.log('Service selected:', serviceId);
+    }
+    
     currentRate = rate;
     minOrder = min;
     maxOrder = max;
@@ -1078,34 +1089,70 @@ function updateOrderSummary() {
 
 // Form Validation
 document.getElementById('orderForm').addEventListener('submit', function(e) {
+    // Validate service selection
     const serviceId = document.getElementById('service_id').value;
-    if (!serviceId) {
+    if (!serviceId || serviceId.trim() === '') {
         e.preventDefault();
+        document.getElementById('serviceError').textContent = '{% trans "Please select a service to continue" %}';
         document.getElementById('serviceError').classList.remove('hidden');
         document.getElementById('step2').scrollIntoView({ behavior: 'smooth' });
         return false;
     }
     
-    const quantity = parseInt(document.getElementById('quantityInput').value);
+    // Validate link
+    const link = document.getElementById('linkInput').value;
+    if (!link || link.trim() === '') {
+        e.preventDefault();
+        document.getElementById('linkError').textContent = '{% trans "Please enter a valid URL" %}';
+        document.getElementById('linkError').classList.remove('hidden');
+        document.getElementById('linkInput').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return false;
+    }
+    
+    // Validate quantity
+    const quantityInput = document.getElementById('quantityInput').value;
+    if (!quantityInput || quantityInput.trim() === '') {
+        e.preventDefault();
+        document.getElementById('quantityError').textContent = '{% trans "Please enter a quantity" %}';
+        document.getElementById('quantityError').classList.remove('hidden');
+        document.getElementById('quantityInput').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return false;
+    }
+    
+    const quantity = parseInt(quantityInput);
+    if (isNaN(quantity) || quantity <= 0) {
+        e.preventDefault();
+        document.getElementById('quantityError').textContent = '{% trans "Please enter a valid quantity" %}';
+        document.getElementById('quantityError').classList.remove('hidden');
+        document.getElementById('quantityInput').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return false;
+    }
+    
     if (!validateQuantity(quantity)) {
         e.preventDefault();
         document.getElementById('quantityInput').scrollIntoView({ behavior: 'smooth', block: 'center' });
         return false;
     }
     
-    const link = document.getElementById('linkInput').value;
-    if (!link) {
-        e.preventDefault();
-        document.getElementById('linkError').classList.remove('hidden');
-        document.getElementById('linkInput').scrollIntoView({ behavior: 'smooth', block: 'center' });
-        return false;
-    }
-    
+    // Validate balance
     const finalCharge = (currentRate / 1000) * quantity - couponDiscount;
     if (userBalance < finalCharge) {
         e.preventDefault();
         alert('{% trans "Insufficient balance. Please top up your account." %}');
         return false;
+    }
+    
+    // If drip feed is enabled, validate drip feed values
+    const dripFeed = document.getElementById('drip_feed').checked;
+    if (dripFeed) {
+        const dripQuantity = document.getElementById('drip_feed_quantity').value;
+        const dripDays = document.getElementById('drip_feed_days').value;
+        
+        if (!dripQuantity || !dripDays || parseInt(dripQuantity) <= 0 || parseInt(dripDays) <= 0) {
+            e.preventDefault();
+            alert('{% trans "Please enter valid drip feed values" %}');
+            return false;
+        }
     }
 });
 
