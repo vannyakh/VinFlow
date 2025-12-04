@@ -12,11 +12,11 @@
         <form method="get" class="space-y-4">
             <div class="flex gap-4 flex-wrap">
                 <input type="text" name="search" value="{{ search }}" placeholder="{% trans 'Search services...' %}" class="flex-1 min-w-[200px] bg-slate-700 border border-slate-600 rounded-lg px-4 py-2">
-                <select name="category" class="bg-slate-700 border border-slate-600 rounded-lg px-4 py-2">
-                    <option value="">{% trans "All Categories" %}</option>
-                    {% for category in categories %}
-                    <option value="{{ category.id }}" {% if category_filter == category.id|stringformat:"s" %}selected{% endif %}>
-                        {{ category.name }}
+                <select name="social_network" class="bg-slate-700 border border-slate-600 rounded-lg px-4 py-2">
+                    <option value="">{% trans "All Platforms" %}</option>
+                    {% for network in social_networks %}
+                    <option value="{{ network.id }}" {% if social_network_filter == network.id|stringformat:"s" %}selected{% endif %}>
+                        {{ network.name }}
                     </option>
                     {% endfor %}
                 </select>
@@ -33,7 +33,7 @@
                 </select>
                 {% if per_page %}<input type="hidden" name="per_page" value="{{ per_page }}">{% endif %}
                 <button type="submit" class="btn-primary">{% trans "Filter" %}</button>
-                {% if search or category_filter or status_filter or supplier_filter %}
+                {% if search or social_network_filter or status_filter or supplier_filter %}
                 <a href="{% url 'admin_services' %}{% if per_page %}?per_page={{ per_page }}{% endif %}" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm">{% trans "Clear" %}</a>
                 {% endif %}
             </div>
@@ -48,7 +48,7 @@
             </div>
             <form method="get" class="flex items-center gap-2">
                 {% if search %}<input type="hidden" name="search" value="{{ search }}">{% endif %}
-                {% if category_filter %}<input type="hidden" name="category" value="{{ category_filter }}">{% endif %}
+                {% if social_network_filter %}<input type="hidden" name="social_network" value="{{ social_network_filter }}">{% endif %}
                 {% if status_filter %}<input type="hidden" name="status" value="{{ status_filter }}">{% endif %}
                 {% if supplier_filter %}<input type="hidden" name="supplier" value="{{ supplier_filter }}">{% endif %}
                 <label for="per_page" class="text-sm text-gray-400">{% trans "Items per page:" %}</label>
@@ -63,6 +63,7 @@
             <table class="w-full">
                 <thead>
                     <tr class="border-b border-slate-700">
+                        <th class="text-left py-3 px-4">{% trans "Platform" %}</th>
                         <th class="text-left py-3 px-4">{% trans "Service" %}</th>
                         <th class="text-left py-3 px-4">{% trans "Category" %}</th>
                         <th class="text-left py-3 px-4">{% trans "Rate" %}</th>
@@ -75,12 +76,30 @@
                     {% for service in services %}
                     <tr class="border-b border-slate-800 hover:bg-slate-800/50">
                         <td class="py-3 px-4">
+                            {% if service.category.social_network %}
+                                <div class="flex items-center gap-2">
+                                    {% if service.category.social_network.icon_image %}
+                                        <img src="{{ service.category.social_network.icon_image.url }}" alt="{{ service.category.social_network.name }}" class="w-6 h-6 object-contain">
+                                    {% elif service.category.social_network.icon %}
+                                        <i class="{{ service.category.social_network.icon }} text-lg" style="color: {{ service.category.social_network.color }}"></i>
+                                    {% else %}
+                                        <i class="{{ service.category.social_network.get_icon_class }} text-lg" style="color: {{ service.category.social_network.color }}"></i>
+                                    {% endif %}
+                                    <span class="text-sm font-medium">{{ service.category.social_network.name }}</span>
+                                </div>
+                            {% else %}
+                                <span class="text-gray-500 text-sm">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3 px-4">
                             <div class="font-medium">{{ service.name }}</div>
                             {% if service.external_service_id %}
                             <div class="text-xs text-gray-500">ID: {{ service.external_service_id }}</div>
                             {% endif %}
                         </td>
-                        <td class="py-3 px-4">{{ service.category.name|default:"-" }}</td>
+                        <td class="py-3 px-4">
+                            <span class="text-sm">{{ service.category.name|default:"-" }}</span>
+                        </td>
                         <td class="py-3 px-4">${{ service.rate|floatformat:4 }}/1K</td>
                         <td class="py-3 px-4">
                             <span class="px-2 py-1 rounded text-xs bg-slate-700 text-gray-300 uppercase">
@@ -104,7 +123,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="6" class="py-8 text-center text-gray-400">{% trans "No services found" %}</td>
+                        <td colspan="7" class="py-8 text-center text-gray-400">{% trans "No services found" %}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -119,10 +138,10 @@
             </div>
             <div class="flex gap-2 flex-wrap">
                 {% if services.has_previous %}
-                <a href="?page=1{% if search %}&search={{ search|urlencode }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if supplier_filter %}&supplier={{ supplier_filter }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm">
+                <a href="?page=1{% if search %}&search={{ search|urlencode }}{% endif %}{% if social_network_filter %}&social_network={{ social_network_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if supplier_filter %}&supplier={{ supplier_filter }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm">
                     {% trans "First" %}
                 </a>
-                <a href="?page={{ services.previous_page_number }}{% if search %}&search={{ search|urlencode }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if supplier_filter %}&supplier={{ supplier_filter }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm">
+                <a href="?page={{ services.previous_page_number }}{% if search %}&search={{ search|urlencode }}{% endif %}{% if social_network_filter %}&social_network={{ social_network_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if supplier_filter %}&supplier={{ supplier_filter }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm">
                     {% trans "Previous" %}
                 </a>
                 {% endif %}
@@ -131,17 +150,17 @@
                     {% if services.number == num %}
                     <span class="px-3 py-2 bg-purple-600 rounded-lg text-sm">{{ num }}</span>
                     {% elif num > services.number|add:'-3' and num < services.number|add:'3' %}
-                    <a href="?page={{ num }}{% if search %}&search={{ search|urlencode }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if supplier_filter %}&supplier={{ supplier_filter }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm">
+                    <a href="?page={{ num }}{% if search %}&search={{ search|urlencode }}{% endif %}{% if social_network_filter %}&social_network={{ social_network_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if supplier_filter %}&supplier={{ supplier_filter }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm">
                         {{ num }}
                     </a>
                     {% endif %}
                 {% endfor %}
                 
                 {% if services.has_next %}
-                <a href="?page={{ services.next_page_number }}{% if search %}&search={{ search|urlencode }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if supplier_filter %}&supplier={{ supplier_filter }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm">
+                <a href="?page={{ services.next_page_number }}{% if search %}&search={{ search|urlencode }}{% endif %}{% if social_network_filter %}&social_network={{ social_network_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if supplier_filter %}&supplier={{ supplier_filter }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm">
                     {% trans "Next" %}
                 </a>
-                <a href="?page={{ services.paginator.num_pages }}{% if search %}&search={{ search|urlencode }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if supplier_filter %}&supplier={{ supplier_filter }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm">
+                <a href="?page={{ services.paginator.num_pages }}{% if search %}&search={{ search|urlencode }}{% endif %}{% if social_network_filter %}&social_network={{ social_network_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if supplier_filter %}&supplier={{ supplier_filter }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm">
                     {% trans "Last" %}
                 </a>
                 {% endif %}

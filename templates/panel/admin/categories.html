@@ -54,6 +54,7 @@
                     <tr class="border-b border-slate-700">
                         <th class="text-left py-3 px-4">{% trans "Name" %}</th>
                         <th class="text-left py-3 px-4">{% trans "Name (Khmer)" %}</th>
+                        <th class="text-left py-3 px-4">{% trans "Social Network" %}</th>
                         <th class="text-left py-3 px-4">{% trans "Order" %}</th>
                         <th class="text-left py-3 px-4">{% trans "Status" %}</th>
                         <th class="text-left py-3 px-4">{% trans "Actions" %}</th>
@@ -64,6 +65,22 @@
                     <tr class="border-b border-slate-800 hover:bg-slate-800/50">
                         <td class="py-3 px-4">{{ category.name }}</td>
                         <td class="py-3 px-4">{{ category.name_km|default:"-" }}</td>
+                        <td class="py-3 px-4">
+                            {% if category.social_network %}
+                                <div class="flex items-center gap-2">
+                                    {% if category.social_network.icon_image %}
+                                        <img src="{{ category.social_network.icon_image.url }}" alt="{{ category.social_network.name }}" class="w-5 h-5 object-contain">
+                                    {% elif category.social_network.icon %}
+                                        <i class="{{ category.social_network.icon }}" style="color: {{ category.social_network.color }}"></i>
+                                    {% else %}
+                                        <i class="{{ category.social_network.get_icon_class }}" style="color: {{ category.social_network.color }}"></i>
+                                    {% endif %}
+                                    <span class="text-sm">{{ category.social_network.name }}</span>
+                                </div>
+                            {% else %}
+                                <span class="text-gray-500 text-sm">-</span>
+                            {% endif %}
+                        </td>
                         <td class="py-3 px-4">{{ category.order }}</td>
                         <td class="py-3 px-4">
                             <span class="px-2 py-1 rounded text-xs {% if category.is_active %}bg-green-900/50 text-green-400{% else %}bg-red-900/50 text-red-400{% endif %}">
@@ -71,7 +88,7 @@
                             </span>
                         </td>
                         <td class="py-3 px-4">
-                            <button onclick="editCategory({{ category.id }}, '{{ category.name|escapejs }}', '{{ category.name_km|default:""|escapejs }}', {{ category.order }}, {% if category.is_active %}true{% else %}false{% endif %})" class="text-purple-400 hover:text-purple-300 text-sm mr-2">
+                            <button onclick="editCategory({{ category.id }}, '{{ category.name|escapejs }}', '{{ category.name_km|default:""|escapejs }}', {{ category.order }}, {% if category.is_active %}true{% else %}false{% endif %}, {{ category.social_network.id|default:'null' }})" class="text-purple-400 hover:text-purple-300 text-sm mr-2">
                                 {% trans "Edit" %}
                             </button>
                             <form method="post" class="inline">
@@ -85,7 +102,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="5" class="py-8 text-center text-gray-400">{% trans "No categories found" %}</td>
+                        <td colspan="6" class="py-8 text-center text-gray-400">{% trans "No categories found" %}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -149,6 +166,17 @@
                 <input type="text" name="name_km" id="categoryNameKm" class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2">
             </div>
             <div>
+                <label class="block text-sm font-medium mb-2">{% trans "Social Network" %}</label>
+                <select name="social_network_id" id="categorySocialNetwork" class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2">
+                    <option value="">{% trans "None" %}</option>
+                    {% for network in social_networks %}
+                    <option value="{{ network.id }}" data-icon="{{ network.get_icon_class }}" data-color="{{ network.color }}">
+                        {{ network.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
                 <label class="block text-sm font-medium mb-2">{% trans "Order" %}</label>
                 <input type="number" name="order" id="categoryOrder" value="0" class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2">
             </div>
@@ -169,7 +197,7 @@
 </div>
 
 <script>
-function editCategory(id, name, nameKm, order, isActive) {
+function editCategory(id, name, nameKm, order, isActive, socialNetworkId) {
     document.getElementById('modalTitle').textContent = '{% trans "Edit Category" %}';
     document.getElementById('formAction').value = 'update';
     document.getElementById('categoryId').value = id;
@@ -177,6 +205,7 @@ function editCategory(id, name, nameKm, order, isActive) {
     document.getElementById('categoryNameKm').value = nameKm || '';
     document.getElementById('categoryOrder').value = order;
     document.getElementById('categoryActive').checked = isActive;
+    document.getElementById('categorySocialNetwork').value = socialNetworkId || '';
     document.getElementById('addModal').classList.remove('hidden');
 }
 </script>

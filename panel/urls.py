@@ -17,6 +17,7 @@ urlpatterns = [
     path('orders/', views.orders, name='orders'),
     path('orders/create/', views.create_order, name='create_order'),
     path('orders/validate-coupon/', views.validate_coupon, name='validate_coupon'),
+    path('orders/services-by-category/', views.get_services_by_category, name='get_services_by_category'),
     path('orders/<int:order_id>/', views.order_detail, name='order_detail'),
     path('orders/<int:order_id>/status/', views.order_status, name='order_status'),
     path('orders/mass-upload/', views.mass_order_upload, name='mass_order_upload'),

@@ -5,48 +5,21 @@
 {% block title %}{% trans "New Order" %} - VinFlow{% endblock %}
 
 {% block content %}
-<div class="max-w-6xl mx-auto space-y-6">
-    <!-- Header with Balance -->
-    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+<div class="max-w-6xl mx-auto space-y-4 md:space-y-6 px-3 md:px-0">
+    <!-- Header with Balance - Sticky on Mobile -->
+    <div class="sticky top-0 z-40 bg-slate-900/95 backdrop-blur-sm -mx-3 px-3 md:mx-0 md:px-0 py-3 md:py-0 md:static flex flex-col md:flex-row justify-between items-start md:items-center gap-3 md:gap-4">
         <div>
-        <h1 class="text-3xl font-bold">{% trans "Create New Order" %}</h1>
-            <p class="text-gray-400 mt-1">{% trans "Select a service and place your order" %}</p>
+        <h1 class="text-2xl md:text-3xl font-bold">{% trans "Create New Order" %}</h1>
+            <p class="text-gray-400 mt-1 text-sm md:text-base">{% trans "Select a service and place your order" %}</p>
         </div>
-        <div class="flex items-center gap-4">
-            <div class="bg-slate-800/50 rounded-lg px-4 py-2 border border-slate-700">
+        <div class="flex items-center gap-2 md:gap-4 w-full md:w-auto">
+            <div class="bg-slate-800/50 rounded-lg px-3 md:px-4 py-2 border border-slate-700 flex-1 md:flex-initial">
                 <div class="text-xs text-gray-400">{% trans "Balance" %}</div>
-                <div class="text-xl font-bold text-cyan-400">${{ user_balance|floatformat:2 }}</div>
+                <div class="text-lg md:text-xl font-bold text-cyan-400">${{ user_balance|floatformat:2 }}</div>
             </div>
-            <a href="{% url 'orders' %}" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm transition">
+            <a href="{% url 'orders' %}" class="px-3 md:px-4 py-2 bg-slate-700 hover:bg-slate-600 active:bg-slate-500 rounded-lg text-sm transition whitespace-nowrap">
             {% trans "View Orders" %}
         </a>
-        </div>
-    </div>
-    
-    <!-- Progress Steps -->
-    <div class="card-glass rounded-xl p-6">
-        <div class="flex items-center justify-between mb-6">
-            <div class="flex items-center gap-2 flex-1">
-                <div class="step-indicator active" data-step="1">
-                    <div class="step-number">1</div>
-                    <div class="step-label">{% trans "Platform" %}</div>
-                </div>
-                <div class="step-line"></div>
-                <div class="step-indicator" data-step="2">
-                    <div class="step-number">2</div>
-                    <div class="step-label">{% trans "Service" %}</div>
-                </div>
-                <div class="step-line"></div>
-                <div class="step-indicator" data-step="3">
-                    <div class="step-number">3</div>
-                    <div class="step-label">{% trans "Details" %}</div>
-                </div>
-                <div class="step-line"></div>
-                <div class="step-indicator" data-step="4">
-                    <div class="step-number">4</div>
-                    <div class="step-label">{% trans "Review" %}</div>
-                </div>
-            </div>
         </div>
     </div>
     
@@ -54,184 +27,182 @@
     {% include 'panel/partials/promotion_banner.html' with location='checkout' %}
     
     <!-- Platform Selection -->
-    <div class="card-glass rounded-xl p-6" id="step1">
-        <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div class="card-glass rounded-xl p-4 md:p-6" id="step1">
+        <h2 class="text-lg md:text-xl font-semibold mb-3 md:mb-4 flex items-center gap-2">
+            <svg class="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
             </svg>
             {% trans "Select Platform" %}
         </h2>
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <button onclick="selectPlatform('all')" id="platform-all" class="platform-btn platform-active p-4 rounded-lg border-2 border-slate-700 hover:border-purple-500 transition flex flex-col items-center gap-2">
-                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-5 gap-2 md:gap-3">
+            <button onclick="selectPlatform('all')" id="platform-all" class="platform-btn p-3 md:p-4 rounded-lg border-2 border-slate-700 active:scale-95 transition-all flex flex-col items-center gap-1 md:gap-2 min-h-[80px] md:min-h-[90px]">
+                <svg class="w-7 h-7 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
                 </svg>
-                <span class="font-semibold">{% trans "Everything" %}</span>
+                <span class="font-semibold text-xs md:text-sm">{% trans "All" %}</span>
             </button>
-            <button onclick="selectPlatform('tt')" id="platform-tt" class="platform-btn p-4 rounded-lg border-2 border-slate-700 hover:border-purple-500 transition flex flex-col items-center gap-2">
-                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path>
-                </svg>
-                <span class="font-semibold">TikTok</span>
+            {% for network in social_networks %}
+            <button onclick="selectPlatform('{{ network.platform_code }}')" id="platform-{{ network.platform_code }}" class="platform-btn p-3 md:p-4 rounded-lg border-2 border-slate-700 active:scale-95 transition-all flex flex-col items-center gap-1 md:gap-2 min-h-[80px] md:min-h-[90px]">
+                {% if network.icon_image %}
+                    <img src="{{ network.icon_image.url }}" alt="{{ network.name }}" class="w-7 h-7 md:w-8 md:h-8 object-contain">
+                {% elif network.icon %}
+                    <i class="{{ network.icon }} text-2xl md:text-3xl" style="color: {{ network.color }}"></i>
+                {% else %}
+                    <i class="{{ network.get_icon_class }} text-2xl md:text-3xl" style="color: {{ network.color }}"></i>
+                {% endif %}
+                <span class="font-semibold text-xs md:text-sm text-center leading-tight">
+                    {% if is_khmer %}{{ network.name_km|default:network.name }}{% else %}{{ network.name }}{% endif %}
+                </span>
             </button>
-            <button onclick="selectPlatform('yt')" id="platform-yt" class="platform-btn p-4 rounded-lg border-2 border-slate-700 hover:border-purple-500 transition flex flex-col items-center gap-2">
-                <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
-                </svg>
-                <span class="font-semibold">YouTube</span>
-            </button>
-            <button onclick="selectPlatform('tg')" id="platform-tg" class="platform-btn p-4 rounded-lg border-2 border-slate-700 hover:border-purple-500 transition flex flex-col items-center gap-2">
-                <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
-                </svg>
-                <span class="font-semibold">Telegram</span>
-            </button>
-            <button onclick="selectPlatform('ig')" id="platform-ig" class="platform-btn p-4 rounded-lg border-2 border-slate-700 hover:border-purple-500 transition flex flex-col items-center gap-2">
-                <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
-                </svg>
-                <span class="font-semibold">Instagram</span>
-            </button>
-            <button onclick="selectPlatform('fb')" id="platform-fb" class="platform-btn p-4 rounded-lg border-2 border-slate-700 hover:border-purple-500 transition flex flex-col items-center gap-2">
-                <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                </svg>
-                <span class="font-semibold">Facebook</span>
-            </button>
-            <button onclick="selectPlatform('tw')" id="platform-tw" class="platform-btn p-4 rounded-lg border-2 border-slate-700 hover:border-purple-500 transition flex flex-col items-center gap-2">
-                <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-                </svg>
-                <span class="font-semibold">Twitter/X</span>
-            </button>
-            <button onclick="selectPlatform('sp')" id="platform-sp" class="platform-btn p-4 rounded-lg border-2 border-slate-700 hover:border-purple-500 transition flex flex-col items-center gap-2">
-                <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66.06 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.42 1.56-.299.421-1.02.599-1.559.3z"/>
-                </svg>
-                <span class="font-semibold">Spotify</span>
-            </button>
+            {% endfor %}
         </div>
     </div>
     
     <!-- Order Form -->
-    <div class="card-glass rounded-xl p-6" id="step2">
-        <div class="flex justify-between items-center mb-6">
-            <h2 class="text-xl font-semibold flex items-center gap-2">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div class="card-glass rounded-xl p-4 md:p-6" id="step2">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 md:mb-6">
+            <h2 class="text-lg md:text-xl font-semibold flex items-center gap-2">
+                <svg class="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                 </svg>
                 {% trans "Order Details" %}
             </h2>
-            <button onclick="window.open('https://youtu.be/example', '_blank')" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm flex items-center gap-2 transition">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <button onclick="window.open('https://youtu.be/example', '_blank')" class="px-3 md:px-4 py-2 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 rounded-lg text-xs md:text-sm flex items-center gap-2 transition">
+                <svg class="w-3 h-3 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
                 </svg>
-                {% trans "Video Tutorial" %}
+                <span class="hidden sm:inline">{% trans "Video Tutorial" %}</span>
+                <span class="sm:hidden">{% trans "Tutorial" %}</span>
             </button>
         </div>
         
-        <form method="post" action="{% url 'create_order' %}" id="orderForm" class="space-y-6">
+        <form method="post" action="{% url 'create_order' %}" id="orderForm" class="space-y-4 md:space-y-6">
             {% csrf_token %}
             
             <!-- Search Services -->
             <div>
                 <label class="text-sm font-medium mb-2 flex items-center gap-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                     </svg>
                     {% trans "Search Services" %}
                 </label>
-                <input type="text" id="searchInput" placeholder="{% trans 'Search services...' %}" class="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-3 focus:border-purple-500 focus:outline-none transition">
+                <input type="text" id="searchInput" placeholder="{% trans 'Search services...' %}" class="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-3 md:py-3 text-base focus:border-purple-500 focus:outline-none transition">
             </div>
             
             <!-- Category Selection -->
             <div>
                 <label class="text-sm font-medium mb-2 flex items-center gap-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
                     </svg>
                     {% trans "Category" %}
                 </label>
-                <select id="categorySelect" onchange="filterServices()" class="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-3 focus:border-purple-500 focus:outline-none transition">
-                    <option value="">{% trans "All Categories" %}</option>
+                
+                <!-- Hidden select for form submission -->
+                <select id="categorySelect" onchange="filterServices()" class="hidden">
                     {% for category in categories %}
-                        <option value="{{ category.id }}">
-                            {% if is_khmer %}{{ category.name_km|default:category.name }}{% else %}{{ category.name }}{% endif %}
+                        <option value="{{ category.id }}" 
+                                data-platform="{{ category.social_network.platform_code|default:'' }}"
+                                data-social-network="{{ category.social_network.id|default:'' }}">
+                            {% if category.social_network %}[{{ category.social_network.name }}] {% endif %}{% if is_khmer %}{{ category.name_km|default:category.name }}{% else %}{{ category.name }}{% endif %}
                         </option>
                     {% endfor %}
                 </select>
+                
+                <!-- Custom dropdown display -->
+                <div class="relative">
+                    <div id="categoryDisplay" onclick="toggleCategoryDropdown()" class="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-3 cursor-pointer flex items-center justify-between active:bg-slate-600/50 transition">
+                        <div id="selectedCategoryDisplay" class="flex items-center gap-2 text-base">
+                            <span class="text-gray-400">{% trans "Select Category" %}</span>
+                        </div>
+                        <svg class="w-5 h-5 text-gray-400 transition-transform flex-shrink-0" id="categoryDropdownArrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </div>
+                    
+                    <!-- Dropdown menu -->
+                    <div id="categoryDropdownMenu" class="hidden fixed md:absolute z-50 left-3 right-3 md:left-auto md:right-auto md:w-full mt-2 bg-slate-700 border border-slate-600 rounded-lg shadow-xl max-h-[60vh] md:max-h-96 overflow-y-auto custom-scrollbar">
+                        <div class="p-2">
+                            {% for category in categories %}
+                            <div onclick="selectCategory('{{ category.id }}', this)" 
+                                 class="category-option p-4 md:p-3 rounded active:bg-slate-500 cursor-pointer transition {% if forloop.first %}category-first{% endif %}"
+                                 data-platform="{{ category.social_network.platform_code|default:'' }}"
+                                 data-social-network="{{ category.social_network.id|default:'' }}"
+                                 data-category-id="{{ category.id }}">
+                                <div class="flex items-center gap-3">
+                                    {% if category.social_network %}
+                                        {% if category.social_network.icon_image %}
+                                            <img src="{{ category.social_network.icon_image.url }}" alt="{{ category.social_network.name }}" class="w-6 h-6 md:w-5 md:h-5 object-contain flex-shrink-0">
+                                        {% elif category.social_network.icon %}
+                                            <i class="{{ category.social_network.icon }} text-xl md:text-lg flex-shrink-0" style="color: {{ category.social_network.color }}"></i>
+                                        {% else %}
+                                            <i class="{{ category.social_network.get_icon_class }} text-xl md:text-lg flex-shrink-0" style="color: {{ category.social_network.color }}"></i>
+                                        {% endif %}
+                                    {% else %}
+                                        <div class="w-6 h-6 md:w-5 md:h-5 flex-shrink-0"></div>
+                                    {% endif %}
+                                    <div class="min-w-0 flex-1">
+                                        <div class="font-medium text-white text-base md:text-sm">
+                                            {% if is_khmer %}{{ category.name_km|default:category.name }}{% else %}{{ category.name }}{% endif %}
+                                        </div>
+                                        {% if category.social_network %}
+                                        <div class="text-xs text-gray-400">{{ category.social_network.name }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
             </div>
             
             <!-- Service Selection -->
             <div>
                 <label class="text-sm font-medium mb-2 flex items-center gap-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                     </svg>
                     {% trans "Service" %} <span class="text-red-400">*</span>
                 </label>
                 <input type="hidden" name="service_id" id="service_id" required>
-                <div id="servicesContainer" class="space-y-2 max-h-96 overflow-y-auto custom-scrollbar">
-                    {% for service in services %}
-                        <div class="service-card p-4 border-2 border-slate-700 rounded-lg hover:border-purple-500 cursor-pointer transition"
-                             data-service-id="{{ service.id }}"
-                             data-platform="{{ service.service_type }}"
-                             data-category="{{ service.category.id|default:'' }}"
-                             data-name="{{ service.name|lower }}"
-                             data-rate="{{ service.rate }}"
-                             data-min="{{ service.min_order }}"
-                             data-max="{{ service.max_order }}"
-                             data-drip="{{ service.drip_feed_enabled|yesno:'true,false' }}"
-                             onclick="selectService(this)">
-                            <div class="flex justify-between items-start">
-                                <div class="flex-1">
-                                    <h3 class="font-semibold text-lg">
-                                        <span class="text-cyan-400">{{ service.external_service_id }}</span>
-                                        - {% if is_khmer %}{{ service.name_km|default:service.name }}{% else %}{{ service.name }}{% endif %}
-                                        {% if service.drip_feed_enabled %}
-                                            <span class="text-xs px-2 py-1 bg-yellow-900/50 text-yellow-400 rounded ml-2 inline-flex items-center gap-1">
-                                                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"></path>
+                <div id="servicesContainer" class="space-y-2 max-h-[50vh] md:max-h-96 overflow-y-auto custom-scrollbar">
+                    <!-- Waiting for category selection message -->
+                    <div id="waitingCategoryMessage" class="text-center py-12 bg-slate-800/30 rounded-lg border-2 border-dashed border-slate-700">
+                        <svg class="w-16 h-16 mx-auto mb-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
                                                 </svg>
-                                                SuperFast
-                                            </span>
-                                        {% endif %}
-                                        <span class="text-xs px-2 py-1 bg-green-900/50 text-green-400 rounded ml-2 inline-flex items-center gap-1">
-                                            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
-                                            </svg>
-                                            Ultrafast Completed
-                                        </span>
-                                    </h3>
-                                    <p class="text-sm text-gray-400 mt-1">
-                                        {% if is_khmer %}{{ service.description_km|default:service.description|truncatewords:20 }}{% else %}{{ service.description|truncatewords:20 }}{% endif %}
-                                    </p>
+                        <h3 class="text-lg font-semibold text-gray-300 mb-2">{% trans "Select a Category" %}</h3>
+                        <p class="text-sm text-gray-400">{% trans "Please choose a category above to view available services" %}</p>
                                 </div>
-                                <div class="text-right ml-4">
-                                    <div class="text-cyan-400 font-bold">${{ service.rate|floatformat:4 }}/1K</div>
-                                    <div class="text-xs text-gray-400">Min: {{ service.min_order }}</div>
-                                    <div class="text-xs text-gray-400">Max: {{ service.max_order }}</div>
+                    
+                    <!-- Loading spinner -->
+                    <div id="loadingServices" class="hidden text-center py-12">
+                        <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-purple-500 border-t-transparent"></div>
+                        <p class="text-gray-400 mt-4">{% trans "Loading services..." %}</p>
                                 </div>
+                    
+                    <!-- Services will be dynamically loaded here -->
                             </div>
-                        </div>
-                    {% endfor %}
-                </div>
-                <p class="text-xs text-gray-400 mt-2" id="serviceInfo">{% trans "Please select a service" %}</p>
+                <p class="text-xs text-gray-400 mt-2" id="serviceInfo">
+                    <span id="serviceInfoText">{% trans "Select a category above to view available services" %}</span>
+                </p>
                 <p class="text-xs text-red-400 mt-1 hidden" id="serviceError">{% trans "Please select a service to continue" %}</p>
             </div>
             
             <!-- Step 3: Order Details -->
-            <div id="step3" class="space-y-6 hidden">
+            <div id="step3" class="space-y-4 md:space-y-6 hidden">
             <!-- Link Input -->
             <div>
                 <label class="text-sm font-medium mb-2 flex items-center gap-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
                     </svg>
                     {% trans "Link" %} <span class="text-red-400">*</span>
                 </label>
-                    <input type="url" name="link" id="linkInput" required placeholder="https://..." class="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-3 focus:border-purple-500 focus:outline-none transition">
+                    <input type="url" name="link" id="linkInput" required placeholder="https://..." class="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-3 text-base focus:border-purple-500 focus:outline-none transition">
                     <p class="text-xs text-gray-400 mt-1">{% trans "Enter the URL of the content you want to promote" %}</p>
                     <p class="text-xs text-red-400 mt-1 hidden" id="linkError">{% trans "Please enter a valid URL" %}</p>
             </div>
@@ -239,54 +210,38 @@
                 <!-- Quantity Input with Quick Buttons -->
             <div>
                 <label class="text-sm font-medium mb-2 flex items-center gap-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
                     </svg>
                     {% trans "Quantity" %} <span class="text-red-400">*</span>
                 </label>
-                    <div class="flex gap-2 mb-2">
-                        <button type="button" onclick="setQuickQuantity(100)" class="px-3 py-1 text-xs bg-slate-700 hover:bg-slate-600 rounded transition">100</button>
-                        <button type="button" onclick="setQuickQuantity(500)" class="px-3 py-1 text-xs bg-slate-700 hover:bg-slate-600 rounded transition">500</button>
-                        <button type="button" onclick="setQuickQuantity(1000)" class="px-3 py-1 text-xs bg-slate-700 hover:bg-slate-600 rounded transition">1K</button>
-                        <button type="button" onclick="setQuickQuantity(5000)" class="px-3 py-1 text-xs bg-slate-700 hover:bg-slate-600 rounded transition">5K</button>
-                        <button type="button" onclick="setQuickQuantity(10000)" class="px-3 py-1 text-xs bg-slate-700 hover:bg-slate-600 rounded transition">10K</button>
+                    <div class="flex flex-wrap gap-2 mb-2">
+                        <button type="button" onclick="setQuickQuantity(100)" class="flex-1 min-w-[60px] px-3 py-2 text-sm bg-slate-700 hover:bg-slate-600 active:bg-slate-500 rounded transition">100</button>
+                        <button type="button" onclick="setQuickQuantity(500)" class="flex-1 min-w-[60px] px-3 py-2 text-sm bg-slate-700 hover:bg-slate-600 active:bg-slate-500 rounded transition">500</button>
+                        <button type="button" onclick="setQuickQuantity(1000)" class="flex-1 min-w-[60px] px-3 py-2 text-sm bg-slate-700 hover:bg-slate-600 active:bg-slate-500 rounded transition">1K</button>
+                        <button type="button" onclick="setQuickQuantity(5000)" class="flex-1 min-w-[60px] px-3 py-2 text-sm bg-slate-700 hover:bg-slate-600 active:bg-slate-500 rounded transition">5K</button>
+                        <button type="button" onclick="setQuickQuantity(10000)" class="flex-1 min-w-[60px] px-3 py-2 text-sm bg-slate-700 hover:bg-slate-600 active:bg-slate-500 rounded transition">10K</button>
                     </div>
-                    <input type="number" name="quantity" id="quantityInput" required min="1" placeholder="100" class="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-3 focus:border-purple-500 focus:outline-none transition" oninput="updateCharge()">
+                    <input type="number" name="quantity" id="quantityInput" required min="1" placeholder="100" class="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-3 text-base focus:border-purple-500 focus:outline-none transition" oninput="updateCharge()">
                 <p class="text-xs text-gray-400 mt-1" id="quantityRange">{% trans "Min: 5 - Max: 20,000,000" %}</p>
                     <p class="text-xs text-red-400 mt-1 hidden" id="quantityError"></p>
-            </div>
-            
-            <!-- Average Time -->
-            <div>
-                <label class="text-sm font-medium mb-2 flex items-center gap-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                    {% trans "Average time" %}
-                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                </label>
-                <div class="bg-slate-700/30 border border-slate-600 rounded-lg px-4 py-3 text-gray-400">
-                        <span id="avgTime">-</span>
-                </div>
             </div>
             
             <!-- Drip Feed Options (Hidden by default) -->
             <div id="dripFeedSection" class="hidden space-y-4">
                 <div class="flex items-center space-x-2">
-                    <input type="checkbox" name="drip_feed" id="drip_feed" class="rounded">
+                    <input type="checkbox" name="drip_feed" id="drip_feed" class="rounded w-5 h-5">
                     <label for="drip_feed" class="text-sm font-medium">{% trans "Enable Drip-Feed (Spread delivery over multiple days)" %}</label>
                 </div>
                     <div id="dripFeedOptions" class="hidden">
-                        <div class="grid grid-cols-2 gap-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm mb-2">{% trans "Quantity per day" %}</label>
-                                <input type="number" name="drip_feed_quantity" id="drip_feed_quantity" class="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-2" min="1">
+                                <input type="number" name="drip_feed_quantity" id="drip_feed_quantity" class="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-3 text-base" min="1">
                     </div>
                     <div>
                         <label class="block text-sm mb-2">{% trans "Number of days" %}</label>
-                                <input type="number" name="drip_feed_days" id="drip_feed_days" class="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-2" min="1">
+                                <input type="number" name="drip_feed_days" id="drip_feed_days" class="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-3 text-base" min="1">
                             </div>
                     </div>
                 </div>
@@ -295,14 +250,14 @@
                 <!-- Coupon Code with Real-time Validation -->
             <div>
                 <label class="text-sm font-medium mb-2 flex items-center gap-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"></path>
                     </svg>
                     {% trans "Coupon Code (Optional)" %}
                 </label>
                     <div class="flex gap-2">
-                        <input type="text" name="coupon_code" id="couponInput" placeholder="VINOPENING" class="flex-1 bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-3 focus:border-purple-500 focus:outline-none transition" onblur="validateCoupon()">
-                        <button type="button" onclick="validateCoupon()" class="px-4 py-3 bg-purple-600 hover:bg-purple-500 rounded-lg text-sm transition">
+                        <input type="text" name="coupon_code" id="couponInput" placeholder="VINOPENING" class="flex-1 bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-3 text-base focus:border-purple-500 focus:outline-none transition" onblur="validateCoupon()">
+                        <button type="button" onclick="validateCoupon()" class="px-4 md:px-6 py-3 bg-purple-600 hover:bg-purple-500 active:bg-purple-700 rounded-lg text-sm md:text-base transition whitespace-nowrap">
                             {% trans "Apply" %}
                         </button>
                     </div>
@@ -313,44 +268,44 @@
             </div>
             
             <!-- Step 4: Order Summary -->
-            <div id="step4" class="hidden border-t border-slate-700 pt-6">
-                <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div id="step4" class="hidden border-t border-slate-700 pt-4 md:pt-6">
+                <h3 class="text-base md:text-lg font-semibold mb-3 md:mb-4 flex items-center gap-2">
+                    <svg class="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
                     </svg>
                     {% trans "Order Summary" %}
                 </h3>
                 <div class="bg-slate-800/50 rounded-lg p-4 space-y-3 mb-6">
-                    <div class="flex justify-between">
-                        <span class="text-gray-400">{% trans "Service" %}:</span>
-                        <span id="summaryService" class="font-semibold">-</span>
+                    <div class="flex justify-between gap-4">
+                        <span class="text-gray-400 text-sm">{% trans "Service" %}:</span>
+                        <span id="summaryService" class="font-semibold text-sm text-right">-</span>
+                    </div>
+                    <div class="flex justify-between gap-4">
+                        <span class="text-gray-400 text-sm flex-shrink-0">{% trans "Link" %}:</span>
+                        <span id="summaryLink" class="font-semibold text-xs break-all text-right">-</span>
                     </div>
                     <div class="flex justify-between">
-                        <span class="text-gray-400">{% trans "Link" %}:</span>
-                        <span id="summaryLink" class="font-semibold text-sm break-all text-right max-w-xs">-</span>
+                        <span class="text-gray-400 text-sm">{% trans "Quantity" %}:</span>
+                        <span id="summaryQuantity" class="font-semibold text-sm">-</span>
                     </div>
                     <div class="flex justify-between">
-                        <span class="text-gray-400">{% trans "Quantity" %}:</span>
-                        <span id="summaryQuantity" class="font-semibold">-</span>
+                        <span class="text-gray-400 text-sm">{% trans "Rate" %}:</span>
+                        <span id="summaryRate" class="font-semibold text-sm">-</span>
                     </div>
-                    <div class="flex justify-between">
-                        <span class="text-gray-400">{% trans "Rate" %}:</span>
-                        <span id="summaryRate" class="font-semibold">-</span>
-                    </div>
-                    <div class="flex justify-between border-t border-slate-700 pt-2">
-                        <span class="text-gray-400">{% trans "Subtotal" %}:</span>
+                    <div class="flex justify-between border-t border-slate-700 pt-3">
+                        <span class="text-gray-400 text-sm">{% trans "Subtotal" %}:</span>
                         <span id="summarySubtotal" class="font-semibold">$0.00</span>
                     </div>
                     <div class="flex justify-between" id="summaryDiscountRow" style="display: none;">
-                        <span class="text-green-400">{% trans "Discount" %}:</span>
+                        <span class="text-green-400 text-sm">{% trans "Discount" %}:</span>
                         <span id="summaryDiscount" class="font-semibold text-green-400">-$0.00</span>
                     </div>
-                    <div class="flex justify-between border-t border-slate-700 pt-2">
-                        <span class="text-lg text-gray-300">{% trans "Total Charge" %}:</span>
-                        <span class="text-2xl font-bold text-cyan-400" id="totalCharge">$0.00</span>
+                    <div class="flex justify-between border-t border-slate-700 pt-3">
+                        <span class="text-base md:text-lg text-gray-300">{% trans "Total Charge" %}:</span>
+                        <span class="text-xl md:text-2xl font-bold text-cyan-400" id="totalCharge">$0.00</span>
                     </div>
-                    <div class="flex justify-between border-t border-slate-700 pt-2">
-                        <span class="text-gray-400">{% trans "Your Balance" %}:</span>
+                    <div class="flex justify-between border-t border-slate-700 pt-3">
+                        <span class="text-gray-400 text-sm">{% trans "Your Balance" %}:</span>
                         <span id="summaryBalance" class="font-semibold">${{ user_balance|floatformat:2 }}</span>
                     </div>
                     <div class="flex justify-between" id="balanceWarning" style="display: none;">
@@ -360,88 +315,74 @@
                 </div>
                 
                 <!-- Submit Button -->
-                <button type="submit" id="submitBtn" class="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-bold py-4 rounded-lg text-lg transition transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <button type="submit" id="submitBtn" class="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 active:from-purple-700 active:to-blue-700 text-white font-bold py-4 rounded-lg text-base md:text-lg transition active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 flex items-center justify-center gap-2 shadow-lg">
+                    <svg class="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
                     </svg>
                     {% trans "Place Order" %}
                 </button>
-                <p class="text-xs text-center text-gray-400 mt-2">{% trans "By placing this order, you agree to our terms of service" %}</p>
+                <p class="text-xs text-center text-gray-400 mt-3">{% trans "By placing this order, you agree to our terms of service" %}</p>
             </div>
         </form>
     </div>
 </div>
 
+<!-- Mobile Bottom Padding for Better Scrolling -->
+<div class="h-20 md:hidden"></div>
+
 <style>
+/* Platform Selection */
 .platform-active {
     border-color: #a855f7 !important;
     background: linear-gradient(135deg, rgba(168, 85, 247, 0.1) 0%, rgba(59, 130, 246, 0.1) 100%);
 }
 
+.platform-btn {
+    -webkit-tap-highlight-color: transparent;
+    position: relative;
+}
+
+/* Recent Platform Badge */
+.recent-badge {
+    animation: pulseGlow 2s ease-in-out infinite;
+    font-size: 10px;
+    z-index: 10;
+}
+
+@keyframes pulseGlow {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+    transform: scale(1.1);
+        opacity: 0.8;
+    }
+}
+
+/* Service Cards */
 .service-card.selected {
     border-color: #a855f7 !important;
-    background: linear-gradient(135deg, rgba(168, 85, 247, 0.1) 0%, rgba(59, 130, 246, 0.1) 100%);
+    background: linear-gradient(135deg, rgba(168, 85, 247, 0.15) 0%, rgba(59, 130, 246, 0.15) 100%);
 }
 
 .service-card.hidden {
     display: none;
 }
 
-.step-indicator {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.5rem;
-    flex: 1;
-    position: relative;
+.service-card {
+    -webkit-tap-highlight-color: transparent;
 }
 
-.step-number {
-    width: 2.5rem;
-    height: 2.5rem;
-    border-radius: 50%;
-    background: rgba(51, 65, 85, 0.5);
-    border: 2px solid #475569;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
-    color: #94a3b8;
-    transition: all 0.3s;
+/* Custom Scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
 }
 
-.step-indicator.active .step-number {
-    background: linear-gradient(135deg, #a855f7 0%, #3b82f6 100%);
-    border-color: #a855f7;
-    color: white;
-    transform: scale(1.1);
-}
-
-.step-label {
-    font-size: 0.75rem;
-    color: #94a3b8;
-    text-align: center;
-}
-
-.step-indicator.active .step-label {
-    color: #a855f7;
-    font-weight: 600;
-}
-
-.step-line {
-    flex: 1;
-    height: 2px;
-    background: #475569;
-    margin: 0 0.5rem;
-    margin-top: -1.25rem;
-}
-
-.step-indicator.active ~ .step-line {
-    background: linear-gradient(90deg, #a855f7 0%, #3b82f6 100%);
-}
-
+@media (min-width: 768px) {
 .custom-scrollbar::-webkit-scrollbar {
     width: 8px;
+    }
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
@@ -457,9 +398,92 @@
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background: #64748b;
 }
+
+/* Category Dropdown */
+.category-option.selected {
+    background: rgba(168, 85, 247, 0.2);
+    border-left: 3px solid #a855f7;
+}
+
+.category-option {
+    -webkit-tap-highlight-color: transparent;
+}
+
+#categoryDropdownMenu {
+    animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Mobile Input Fixes */
+@media (max-width: 768px) {
+    /* Prevent zoom on input focus on iOS */
+    input[type="text"],
+    input[type="url"],
+    input[type="number"],
+    select,
+    textarea {
+        font-size: 16px !important;
+    }
+    
+    /* Better touch targets */
+    button,
+    .platform-btn,
+    .service-card,
+    .category-option {
+        -webkit-user-select: none;
+        user-select: none;
+    }
+    
+    /* Smooth scrolling */
+    html {
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    /* Fixed category dropdown on mobile */
+    #categoryDropdownMenu {
+        position: fixed;
+        left: 0.75rem;
+        right: 0.75rem;
+        width: auto;
+    }
+}
+
+/* Active states for better touch feedback */
+button:active,
+.platform-btn:active,
+.service-card:active,
+.category-option:active {
+    opacity: 0.9;
+}
+
+/* Prevent text selection on buttons */
+button,
+.platform-btn {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    user-select: none;
+}
 </style>
 
 <script>
+/**
+ * VinFlow Order Form
+ * Features:
+ * - Saves selected platform to localStorage for better UX
+ * - Auto-selects user's last used platform on page load
+ * - Dynamic category and service filtering
+ */
+
 let currentRate = 0;
 let minOrder = 1;
 let maxOrder = 100000;
@@ -468,9 +492,17 @@ let selectedService = null;
 let couponDiscount = 0;
 let userBalance = parseFloat('{{ user_balance|default:0 }}') || 0;
 
-// Platform Selection
+// Platform Selection with localStorage persistence
 function selectPlatform(platform) {
     selectedPlatform = platform;
+    
+    // Save to localStorage for future visits
+    try {
+        localStorage.setItem('vinflow_selected_platform', platform);
+        localStorage.setItem('vinflow_platform_timestamp', new Date().getTime());
+    } catch (e) {
+        console.log('localStorage not available');
+    }
     
     // Update UI
     document.querySelectorAll('.platform-btn').forEach(btn => {
@@ -478,10 +510,360 @@ function selectPlatform(platform) {
     });
     document.getElementById('platform-' + platform).classList.add('platform-active');
     
+    // Filter categories based on platform
+    filterCategories(platform);
+    
     // Filter services
     filterServices();
-    updateStep(1);
 }
+
+// Load saved platform preference
+function loadSavedPlatform() {
+    try {
+        const savedPlatform = localStorage.getItem('vinflow_selected_platform');
+        const timestamp = localStorage.getItem('vinflow_platform_timestamp');
+        
+        if (savedPlatform && timestamp) {
+            // Check if saved within last 30 days
+            const daysSince = (new Date().getTime() - parseInt(timestamp)) / (1000 * 60 * 60 * 24);
+            
+            if (daysSince < 30) {
+                // Check if the platform button exists
+                const platformBtn = document.getElementById('platform-' + savedPlatform);
+                if (platformBtn) {
+                    // Add a subtle indicator for recent selection
+                    addRecentIndicator(platformBtn);
+                    return savedPlatform;
+                }
+            }
+        }
+    } catch (e) {
+        console.log('localStorage not available');
+    }
+    return 'all'; // Default to 'all' if nothing saved or error
+}
+
+// Add visual indicator for recently used platform
+function addRecentIndicator(button) {
+    const badge = document.createElement('div');
+    badge.className = 'recent-badge absolute -top-1 -right-1 bg-gradient-to-r from-purple-600 to-blue-600 text-white text-xs px-2 py-0.5 rounded-full shadow-lg';
+    badge.textContent = '⭐';
+    badge.title = '{% trans "Recently used" %}';
+    
+    // Add position relative to button if not already
+    button.style.position = 'relative';
+    button.appendChild(badge);
+}
+
+// Toggle Category Dropdown
+function toggleCategoryDropdown() {
+    const menu = document.getElementById('categoryDropdownMenu');
+    const arrow = document.getElementById('categoryDropdownArrow');
+    
+    if (menu.classList.contains('hidden')) {
+        menu.classList.remove('hidden');
+        arrow.style.transform = 'rotate(180deg)';
+    } else {
+        menu.classList.add('hidden');
+        arrow.style.transform = 'rotate(0deg)';
+    }
+}
+
+// Select Category
+function selectCategory(categoryId, element) {
+    const categorySelect = document.getElementById('categorySelect');
+    const displayDiv = document.getElementById('selectedCategoryDisplay');
+    const menu = document.getElementById('categoryDropdownMenu');
+    const arrow = document.getElementById('categoryDropdownArrow');
+    
+    // Update hidden select
+    categorySelect.value = categoryId;
+    
+    // Remove selected class from all options
+    document.querySelectorAll('.category-option').forEach(opt => {
+        opt.classList.remove('selected');
+    });
+    
+    // Add selected class to clicked element
+    if (element) {
+        element.classList.add('selected');
+        // Update display from element's content
+        const flexDiv = element.querySelector('div.flex');
+        if (flexDiv) {
+            displayDiv.innerHTML = flexDiv.innerHTML;
+        }
+    }
+    
+    // Close dropdown
+    menu.classList.add('hidden');
+    arrow.style.transform = 'rotate(0deg)';
+    
+    // Load services for the selected category
+    if (categoryId) {
+        loadServicesForCategory(categoryId);
+    } else {
+        // No category selected, show waiting message
+        showWaitingMessage();
+    }
+}
+
+// Load services for a specific category via AJAX
+function loadServicesForCategory(categoryId) {
+    const container = document.getElementById('servicesContainer');
+    const waitingMessage = document.getElementById('waitingCategoryMessage');
+    const loadingSpinner = document.getElementById('loadingServices');
+    const serviceInfoText = document.getElementById('serviceInfoText');
+    
+    // Show loading state
+    if (waitingMessage) waitingMessage.classList.add('hidden');
+    if (loadingSpinner) loadingSpinner.classList.remove('hidden');
+    if (serviceInfoText) serviceInfoText.textContent = '{% trans "Loading services..." %}';
+    
+    // Clear existing services
+    const existingServices = container.querySelectorAll('.service-card');
+    existingServices.forEach(card => card.remove());
+    
+    // Fetch services from API
+    const searchTerm = document.getElementById('searchInput').value;
+    const url = new URL('{% url "get_services_by_category" %}', window.location.origin);
+    url.searchParams.append('category_id', categoryId);
+    url.searchParams.append('platform', selectedPlatform);
+    if (searchTerm) {
+        url.searchParams.append('search', searchTerm);
+    }
+    
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            // Hide loading spinner
+            if (loadingSpinner) loadingSpinner.classList.add('hidden');
+            
+            if (data.success && data.services && data.services.length > 0) {
+                // Render services
+                renderServices(data.services);
+                
+                // Update service info
+                if (serviceInfoText) {
+                    serviceInfoText.textContent = `{% trans "Found" %} ${data.count} {% trans "services. Click on a service to continue." %}`;
+                }
+            } else {
+                // No services found
+                showNoServicesMessage();
+                if (serviceInfoText) {
+                    serviceInfoText.textContent = '{% trans "No services available in this category" %}';
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error loading services:', error);
+            if (loadingSpinner) loadingSpinner.classList.add('hidden');
+            showErrorMessage();
+            if (serviceInfoText) {
+                serviceInfoText.textContent = '{% trans "Error loading services. Please try again." %}';
+            }
+        });
+}
+
+// Render services dynamically
+function renderServices(services) {
+    const container = document.getElementById('servicesContainer');
+    
+    services.forEach(service => {
+        const serviceCard = createServiceCard(service);
+        container.appendChild(serviceCard);
+    });
+}
+
+// Create a service card element
+function createServiceCard(service) {
+    const card = document.createElement('div');
+    card.className = 'service-card service-item p-3 md:p-4 border-2 border-slate-700 rounded-lg active:scale-[0.98] cursor-pointer transition-all';
+    card.dataset.serviceId = service.id;
+    card.dataset.platform = service.platform_code || '';
+    card.dataset.category = service.category_id || '';
+    card.dataset.name = service.name.toLowerCase();
+    card.dataset.rate = service.rate;
+    card.dataset.min = service.min_order;
+    card.dataset.max = service.max_order;
+    card.dataset.drip = service.drip_feed_enabled;
+    card.onclick = function() { selectService(this); };
+    
+    // Build social network icon HTML
+    let socialNetworkHTML = '';
+    if (service.social_network) {
+        if (service.social_network.icon_image_url) {
+            socialNetworkHTML = `<img src="${service.social_network.icon_image_url}" alt="${service.social_network.name}" class="w-4 h-4 object-contain flex-shrink-0">`;
+        } else if (service.social_network.icon) {
+            socialNetworkHTML = `<i class="${service.social_network.icon} text-sm flex-shrink-0" style="color: ${service.social_network.color}"></i>`;
+        }
+        socialNetworkHTML += `<span class="text-xs text-gray-400">${service.social_network.name}</span>`;
+    }
+    
+    // Build badges HTML
+    let badgesHTML = '';
+    if (service.drip_feed_enabled) {
+        badgesHTML += `
+            <span class="text-xs px-2 py-1 bg-yellow-900/50 text-yellow-400 rounded inline-flex items-center gap-1">
+                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"></path>
+                </svg>
+                SuperFast
+            </span>
+        `;
+    }
+    badgesHTML += `
+        <span class="text-xs px-2 py-1 bg-green-900/50 text-green-400 rounded inline-flex items-center gap-1">
+            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+            </svg>
+            <span class="hidden sm:inline">Ultrafast Completed</span>
+            <span class="sm:hidden">Fast</span>
+        </span>
+    `;
+    
+    card.innerHTML = `
+        <div class="flex flex-col sm:flex-row justify-between items-start gap-3">
+            <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-1 flex-wrap">
+                    ${socialNetworkHTML}
+                </div>
+                <h3 class="font-semibold text-base md:text-lg leading-tight mb-1">
+                    <span class="text-cyan-400">${service.external_service_id}</span>
+                    - <span class="break-words">${service.name}</span>
+                </h3>
+                <div class="flex flex-wrap gap-1 mb-2">
+                    ${badgesHTML}
+                </div>
+                <p class="text-xs md:text-sm text-gray-400 hidden sm:block">
+                    ${service.description || ''}
+                </p>
+            </div>
+            <div class="text-left sm:text-right w-full sm:w-auto sm:ml-4 flex-shrink-0 bg-slate-800/30 sm:bg-transparent rounded p-2 sm:p-0">
+                <div class="text-cyan-400 font-bold text-base md:text-lg">$${service.rate.toFixed(4)}/1K</div>
+                <div class="text-xs text-gray-400 flex gap-3 sm:block">
+                    <span>Min: ${service.min_order.toLocaleString()}</span>
+                    <span>Max: ${service.max_order.toLocaleString()}</span>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    return card;
+}
+
+// Show waiting message
+function showWaitingMessage() {
+    const container = document.getElementById('servicesContainer');
+    const waitingMessage = document.getElementById('waitingCategoryMessage');
+    const loadingSpinner = document.getElementById('loadingServices');
+    
+    // Clear existing services
+    const existingServices = container.querySelectorAll('.service-card');
+    existingServices.forEach(card => card.remove());
+    
+    // Remove no services message if exists
+    const noServicesMsg = container.querySelector('.no-services-message');
+    if (noServicesMsg) noServicesMsg.remove();
+    
+    if (waitingMessage) waitingMessage.classList.remove('hidden');
+    if (loadingSpinner) loadingSpinner.classList.add('hidden');
+}
+
+// Show no services message
+function showNoServicesMessage() {
+    const container = document.getElementById('servicesContainer');
+    const noServicesMsg = container.querySelector('.no-services-message');
+    
+    if (!noServicesMsg) {
+        const message = document.createElement('div');
+        message.className = 'no-services-message text-center py-8 bg-slate-800/30 rounded-lg border-2 border-slate-700';
+        message.innerHTML = `
+            <svg class="w-12 h-12 mx-auto mb-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <p class="text-gray-400">{% trans "No services found. Try adjusting your filters." %}</p>
+        `;
+        container.appendChild(message);
+    }
+}
+
+// Show error message
+function showErrorMessage() {
+    const container = document.getElementById('servicesContainer');
+    const message = document.createElement('div');
+    message.className = 'no-services-message text-center py-8 bg-red-900/20 rounded-lg border-2 border-red-700';
+    message.innerHTML = `
+        <svg class="w-12 h-12 mx-auto mb-3 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        <p class="text-red-400">{% trans "Error loading services. Please try again." %}</p>
+    `;
+    container.appendChild(message);
+}
+
+// Filter Categories by Platform
+function filterCategories(platform) {
+    const categorySelect = document.getElementById('categorySelect');
+    const options = categorySelect.querySelectorAll('option');
+    const dropdownOptions = document.querySelectorAll('.category-option');
+    let firstVisibleCategory = null;
+    let firstVisibleElement = null;
+    
+    // Filter hidden select options
+    options.forEach((option, index) => {
+        const optionPlatform = option.dataset.platform;
+        
+        if (platform === 'all' || !optionPlatform) {
+            option.style.display = '';
+            if (!firstVisibleCategory) {
+                firstVisibleCategory = option.value;
+            }
+        } else if (optionPlatform === platform) {
+            option.style.display = '';
+            if (!firstVisibleCategory) {
+                firstVisibleCategory = option.value;
+            }
+        } else {
+            option.style.display = 'none';
+        }
+    });
+    
+    // Filter custom dropdown options
+    dropdownOptions.forEach((option) => {
+        const optionPlatform = option.dataset.platform;
+        
+        if (platform === 'all' || !optionPlatform) {
+            option.style.display = '';
+            if (!firstVisibleElement) {
+                firstVisibleElement = option;
+            }
+        } else if (optionPlatform === platform) {
+            option.style.display = '';
+            if (!firstVisibleElement) {
+                firstVisibleElement = option;
+            }
+        } else {
+            option.style.display = 'none';
+        }
+    });
+    
+    // Auto-select first matching category
+    if (firstVisibleCategory && firstVisibleElement) {
+        selectCategory(firstVisibleCategory, firstVisibleElement);
+    }
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(event) {
+    const categoryDisplay = document.getElementById('categoryDisplay');
+    const categoryMenu = document.getElementById('categoryDropdownMenu');
+    const arrow = document.getElementById('categoryDropdownArrow');
+    
+    if (categoryDisplay && categoryMenu && !categoryDisplay.contains(event.target) && !categoryMenu.contains(event.target)) {
+        categoryMenu.classList.add('hidden');
+        if (arrow) arrow.style.transform = 'rotate(0deg)';
+    }
+});
 
 // Service Selection
 function selectService(element) {
@@ -519,12 +901,14 @@ function selectService(element) {
     }
     
     // Update service info
-    document.getElementById('serviceInfo').textContent = element.querySelector('h3').textContent.trim();
+    const serviceInfoText = document.getElementById('serviceInfoText');
+    if (serviceInfoText) {
+        serviceInfoText.textContent = element.querySelector('h3').textContent.trim();
+    }
     document.getElementById('serviceError').classList.add('hidden');
     
     // Show step 3
     document.getElementById('step3').classList.remove('hidden');
-    updateStep(2);
     
     // Scroll to details
     setTimeout(() => {
@@ -535,55 +919,18 @@ function selectService(element) {
     updateCharge();
 }
 
-// Filter Services
+// Filter Services - Now triggers reload from API
 function filterServices() {
-    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
     const category = document.getElementById('categorySelect').value;
     
-    let visibleCount = 0;
-    document.querySelectorAll('.service-card').forEach(card => {
-        const cardPlatform = card.dataset.platform;
-        const cardCategory = card.dataset.category;
-        const cardName = card.dataset.name;
-        
-        let show = true;
-        
-        // Platform filter
-        if (selectedPlatform !== 'all' && cardPlatform !== selectedPlatform) {
-            show = false;
-        }
-        
-        // Category filter
-        if (category && cardCategory !== category) {
-            show = false;
-        }
-        
-        // Search filter
-        if (searchTerm && !cardName.includes(searchTerm)) {
-            show = false;
-        }
-        
-        if (show) {
-            card.classList.remove('hidden');
-            visibleCount++;
-        } else {
-            card.classList.add('hidden');
-        }
-    });
-    
-    // Show message if no services found
-    if (visibleCount === 0) {
-        const container = document.getElementById('servicesContainer');
-        if (!container.querySelector('.no-services-message')) {
-            const message = document.createElement('div');
-            message.className = 'no-services-message text-center py-8 text-gray-400';
-            message.textContent = '{% trans "No services found. Try adjusting your filters." %}';
-            container.appendChild(message);
-        }
-    } else {
-        const message = container.querySelector('.no-services-message');
-        if (message) message.remove();
+    // If no category selected, show waiting message
+    if (!category) {
+        showWaitingMessage();
+        return;
     }
+    
+    // Reload services with current filters
+    loadServicesForCategory(category);
 }
 
 // Quick Quantity Buttons
@@ -726,19 +1073,7 @@ function updateOrderSummary() {
         document.getElementById('linkInput').value && 
         quantity >= minOrder && quantity <= maxOrder) {
         document.getElementById('step4').classList.remove('hidden');
-        updateStep(3);
     }
-}
-
-// Update Step Indicator
-function updateStep(step) {
-    document.querySelectorAll('.step-indicator').forEach((indicator, index) => {
-        if (index + 1 <= step) {
-            indicator.classList.add('active');
-        } else {
-            indicator.classList.remove('active');
-        }
-    });
 }
 
 // Form Validation
@@ -774,8 +1109,14 @@ document.getElementById('orderForm').addEventListener('submit', function(e) {
     }
 });
 
-// Search Input Event
-document.getElementById('searchInput').addEventListener('input', filterServices);
+// Search Input Event - Debounced for better performance
+let searchTimeout;
+document.getElementById('searchInput').addEventListener('input', function() {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+        filterServices();
+    }, 500); // Wait 500ms after user stops typing
+});
 
 // Quantity Input Event
 document.getElementById('quantityInput').addEventListener('input', function() {
@@ -794,8 +1135,26 @@ document.getElementById('drip_feed').addEventListener('change', function() {
     document.getElementById('dripFeedOptions').classList.toggle('hidden', !this.checked);
 });
 
-// Initialize
-filterServices();
-updateStep(1);
+// Initialize - Load saved platform and auto-select first category
+document.addEventListener('DOMContentLoaded', function() {
+    // Show waiting message initially
+    const waitingMessage = document.getElementById('waitingCategoryMessage');
+    if (waitingMessage) {
+        waitingMessage.classList.remove('hidden');
+    }
+    
+    // Load and select saved platform preference
+    const savedPlatform = loadSavedPlatform();
+    if (savedPlatform && savedPlatform !== 'all') {
+        selectPlatform(savedPlatform);
+    } else {
+        // If 'all' or no saved platform, still need to select first category
+        const firstCategoryOption = document.querySelector('.category-option.category-first');
+        if (firstCategoryOption) {
+            const categoryId = firstCategoryOption.dataset.categoryId;
+            selectCategory(categoryId, firstCategoryOption);
+        }
+    }
+});
 </script>
 {% endblock %}

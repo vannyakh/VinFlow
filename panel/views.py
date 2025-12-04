@@ -586,9 +586,12 @@ def services(request):
 # New Order Page
 @login_required
 def new_order(request):
-    """Modern order creation page with platform selection and real-time filtering"""
-    categories = ServiceCategory.objects.filter(is_active=True).order_by('order')
-    services = Service.objects.filter(is_active=True).select_related('category').order_by('category', 'name')
+    """
+    Optimized order creation page with lazy-loading services
+    Services are loaded via AJAX when category is selected for better performance
+    """
+    categories = ServiceCategory.objects.filter(is_active=True).select_related('social_network').order_by('order')
+    social_networks = SocialNetwork.objects.filter(is_active=True).order_by('display_order', 'name')
     
     # Check if user language is Khmer
     is_khmer = request.user.profile.language == 'km' if hasattr(request.user, 'profile') else False
@@ -599,11 +602,93 @@ def new_order(request):
     
     context = {
         'categories': categories,
-        'services': services,
+        # Services are now loaded dynamically via AJAX - no initial load
+        'social_networks': social_networks,
         'is_khmer': is_khmer,
         'user_balance': user_balance,
     }
     return render(request, 'panel/new_order.html', context)
+
+
+@login_required
+@require_http_methods(["GET"])
+def get_services_by_category(request):
+    """
+    AJAX endpoint to fetch services for a specific category
+    Returns JSON with service data for dynamic loading
+    """
+    category_id = request.GET.get('category_id')
+    platform_code = request.GET.get('platform')
+    search_term = request.GET.get('search', '').strip().lower()
+    
+    if not category_id:
+        return JsonResponse({'error': 'Category ID is required'}, status=400)
+    
+    try:
+        # Build query with optimized select_related
+        services = Service.objects.filter(
+            is_active=True,
+            category_id=category_id
+        ).select_related('category', 'category__social_network')
+        
+        # Apply platform filter if provided
+        if platform_code and platform_code != 'all':
+            services = services.filter(category__social_network__platform_code=platform_code)
+        
+        # Apply search filter if provided
+        if search_term:
+            services = services.filter(
+                Q(name__icontains=search_term) | 
+                Q(name_km__icontains=search_term) |
+                Q(description__icontains=search_term)
+            )
+        
+        # Order by name
+        services = services.order_by('name')
+        
+        # Check if user language is Khmer
+        is_khmer = request.user.profile.language == 'km' if hasattr(request.user, 'profile') else False
+        
+        # Build service data
+        services_data = []
+        for service in services:
+            social_network = service.category.social_network if service.category else None
+            
+            service_data = {
+                'id': service.id,
+                'external_service_id': service.external_service_id,
+                'name': service.name_km if is_khmer and service.name_km else service.name,
+                'description': (service.description_km if is_khmer and service.description_km else service.description)[:200] if service.description else '',
+                'rate': float(service.rate),
+                'min_order': service.min_order,
+                'max_order': service.max_order,
+                'drip_feed_enabled': service.drip_feed_enabled,
+                'category_id': service.category.id if service.category else None,
+                'platform_code': social_network.platform_code if social_network else '',
+            }
+            
+            # Add social network info if available
+            if social_network:
+                service_data['social_network'] = {
+                    'name': social_network.name,
+                    'color': social_network.color,
+                    'icon': social_network.icon,
+                    'icon_image_url': social_network.icon_image.url if social_network.icon_image else None,
+                }
+            
+            services_data.append(service_data)
+        
+        return JsonResponse({
+            'success': True,
+            'services': services_data,
+            'count': len(services_data),
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
 
 # Create Order
 @login_required
@@ -1538,8 +1623,9 @@ def admin_cancel(request):
 @login_required
 @admin_required
 def admin_services(request):
-    services = Service.objects.all().select_related('category').order_by('category', 'name')
+    services = Service.objects.all().select_related('category', 'category__social_network').order_by('category', 'name')
     categories = ServiceCategory.objects.all().order_by('order')
+    social_networks = SocialNetwork.objects.all().order_by('display_order', 'name')
     
     # Search functionality
     search = request.GET.get('search', '')
@@ -1551,7 +1637,12 @@ def admin_services(request):
             Q(external_service_id__icontains=search)
         )
     
-    # Category filter
+    # Social Network filter (filters by category's social network)
+    social_network_filter = request.GET.get('social_network', '')
+    if social_network_filter:
+        services = services.filter(category__social_network_id=social_network_filter)
+    
+    # Category filter (still available)
     category_filter = request.GET.get('category', '')
     if category_filter:
         services = services.filter(category_id=category_filter)
@@ -1611,8 +1702,10 @@ def admin_services(request):
     context = {
         'services': services_page,
         'categories': categories,
+        'social_networks': social_networks,
         'search': search,
         'category_filter': category_filter,
+        'social_network_filter': social_network_filter,
         'status_filter': status_filter,
         'supplier_filter': supplier_filter,
         'per_page': per_page,
@@ -1927,7 +2020,15 @@ def admin_categories(request):
             name = request.POST.get('name')
             name_km = request.POST.get('name_km', '')
             order = int(request.POST.get('order', 0))
-            ServiceCategory.objects.create(name=name, name_km=name_km, order=order)
+            social_network_id = request.POST.get('social_network_id')
+            
+            category = ServiceCategory(name=name, name_km=name_km, order=order)
+            if social_network_id:
+                try:
+                    category.social_network_id = int(social_network_id)
+                except (ValueError, TypeError):
+                    pass
+            category.save()
             messages.success(request, 'Category created successfully')
         elif action == 'update':
             category_id = request.POST.get('category_id')
@@ -1937,6 +2038,16 @@ def admin_categories(request):
                 category.name_km = request.POST.get('name_km', '')
                 category.order = int(request.POST.get('order', 0))
                 category.is_active = request.POST.get('is_active') == 'on'
+                
+                social_network_id = request.POST.get('social_network_id')
+                if social_network_id:
+                    try:
+                        category.social_network_id = int(social_network_id)
+                    except (ValueError, TypeError):
+                        category.social_network = None
+                else:
+                    category.social_network = None
+                    
                 category.save()
                 messages.success(request, 'Category updated successfully')
             except ServiceCategory.DoesNotExist:
@@ -1976,6 +2087,7 @@ def admin_categories(request):
     
     context = {
         'categories': categories_page,
+        'social_networks': SocialNetwork.objects.all().order_by('display_order', 'name'),
         'search': search,
         'status_filter': status_filter,
         'per_page': per_page,
