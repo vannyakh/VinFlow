@@ -46,10 +46,15 @@ class ServiceCategory(models.Model):
     icon = models.CharField(max_length=50, blank=True)
     order = models.IntegerField(default=0)
     is_active = models.BooleanField(default=True)
+    # Link to SocialNetwork (optional - for platform-specific categories)
+    social_network = models.ForeignKey('SocialNetwork', on_delete=models.SET_NULL, null=True, blank=True, related_name='service_categories', help_text="Optional: Link category to a specific social network platform")
 
     class Meta:
         verbose_name_plural = "Service Categories"
-        ordering = ['order']
+        ordering = ['order', 'name']
+    
+    def __str__(self):
+        return self.name
 
 # Service Model
 class Service(models.Model):
