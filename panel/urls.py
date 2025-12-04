@@ -48,6 +48,7 @@ urlpatterns = [
     path('admin/transactions/', views.admin_transactions, name='admin_transactions'),
     path('admin/transactions/export/', views.admin_transactions_export, name='admin_transactions_export'),
     path('admin/categories/', views.admin_categories, name='admin_categories'),
+    path('admin/social-networks/', views.admin_social_networks, name='admin_social_networks'),
     path('admin/settings/', views.admin_settings, name='admin_settings'),
     path('admin/settings/toggle-maintenance/', views.toggle_maintenance_mode, name='toggle_maintenance_mode'),
     path('admin/tickets/', views.admin_tickets, name='admin_tickets'),

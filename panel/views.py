@@ -36,7 +36,7 @@ from .models import (
     UserSubscription, Coupon, Payment, Ticket, TicketMessage,
     AffiliateCommission, BlogPost, BlacklistIP, BlacklistLink, BlacklistEmail,
     SystemSetting, Notification, MarketingPromotion, PromotionView,
-    PromotionClick, PromotionConversion
+    PromotionClick, PromotionConversion, SocialNetwork
 )
 
 # Create UserProfile on user creation
@@ -1822,14 +1822,30 @@ def admin_transactions(request):
         sort_by = '-created_at'
     transactions = transactions.order_by(sort_by)
     
-    # Apply slice after filtering and sorting (for display)
-    transactions_display = transactions[:200]
+    # Pagination - Get per_page from request, validate and set default
+    per_page = request.GET.get('per_page', '25')
+    valid_per_page_options = ['10', '25', '50', '100', '200']
+    if per_page not in valid_per_page_options:
+        per_page = '25'
+    per_page_int = int(per_page)
+    
+    paginator = Paginator(transactions, per_page_int)
+    page = request.GET.get('page', 1)
+    
+    try:
+        transactions_page = paginator.page(page)
+    except PageNotAnInteger:
+        transactions_page = paginator.page(1)
+    except EmptyPage:
+        transactions_page = paginator.page(paginator.num_pages)
     
     context = {
-        'transactions': transactions_display,
+        'transactions': transactions_page,
         'status_filter': status_filter,
         'search': search,
         'sort_by': sort_by,
+        'per_page': per_page,
+        'per_page_options': valid_per_page_options,
         'pending_tickets_count': Ticket.objects.filter(status__in=['open', 'in_progress']).count(),
     }
     return render(request, 'panel/admin/transactions.html', context)
@@ -1967,6 +1983,156 @@ def admin_categories(request):
         'pending_tickets_count': Ticket.objects.filter(status__in=['open', 'in_progress']).count(),
     }
     return render(request, 'panel/admin/categories.html', context)
+
+# Admin Social Networks Management
+@login_required
+@admin_required
+def admin_social_networks(request):
+    social_networks = SocialNetwork.objects.all()
+    
+    # Search functionality
+    search = request.GET.get('search', '')
+    if search:
+        social_networks = social_networks.filter(
+            Q(name__icontains=search) |
+            Q(name_km__icontains=search) |
+            Q(platform_code__icontains=search) |
+            Q(description__icontains=search)
+        )
+    
+    # Status filter
+    status_filter = request.GET.get('status', '')
+    if status_filter:
+        social_networks = social_networks.filter(status=status_filter)
+    
+    # Active filter
+    active_filter = request.GET.get('active', '')
+    if active_filter == 'true':
+        social_networks = social_networks.filter(is_active=True)
+    elif active_filter == 'false':
+        social_networks = social_networks.filter(is_active=False)
+    
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        
+        if action == 'create':
+            platform_code = request.POST.get('platform_code')
+            name = request.POST.get('name')
+            name_km = request.POST.get('name_km', '')
+            description = request.POST.get('description', '')
+            description_km = request.POST.get('description_km', '')
+            icon = request.POST.get('icon', '')
+            color = request.POST.get('color', '#000000')
+            status = request.POST.get('status', 'active')
+            is_active = request.POST.get('is_active') == 'on'
+            is_featured = request.POST.get('is_featured') == 'on'
+            display_order = int(request.POST.get('display_order', 0))
+            website_url = request.POST.get('website_url', '')
+            documentation_url = request.POST.get('documentation_url', '')
+            
+            # Check if platform_code already exists
+            if SocialNetwork.objects.filter(platform_code=platform_code).exists():
+                messages.error(request, f'Social network with platform code "{platform_code}" already exists')
+            else:
+                social_network = SocialNetwork.objects.create(
+                    platform_code=platform_code,
+                    name=name,
+                    name_km=name_km,
+                    description=description,
+                    description_km=description_km,
+                    icon=icon,
+                    color=color,
+                    status=status,
+                    is_active=is_active,
+                    is_featured=is_featured,
+                    display_order=display_order,
+                    website_url=website_url,
+                    documentation_url=documentation_url
+                )
+                
+                # Handle file uploads
+                if 'icon_image' in request.FILES:
+                    social_network.icon_image = request.FILES['icon_image']
+                if 'logo' in request.FILES:
+                    social_network.logo = request.FILES['logo']
+                social_network.save()
+                
+                messages.success(request, 'Social network created successfully')
+        elif action == 'update':
+            network_id = request.POST.get('network_id')
+            try:
+                social_network = SocialNetwork.objects.get(id=network_id)
+                social_network.name = request.POST.get('name')
+                social_network.name_km = request.POST.get('name_km', '')
+                social_network.description = request.POST.get('description', '')
+                social_network.description_km = request.POST.get('description_km', '')
+                social_network.icon = request.POST.get('icon', '')
+                social_network.color = request.POST.get('color', '#000000')
+                social_network.status = request.POST.get('status', 'active')
+                social_network.is_active = request.POST.get('is_active') == 'on'
+                social_network.is_featured = request.POST.get('is_featured') == 'on'
+                social_network.display_order = int(request.POST.get('display_order', 0))
+                social_network.website_url = request.POST.get('website_url', '')
+                social_network.documentation_url = request.POST.get('documentation_url', '')
+                
+                # Handle file uploads
+                if 'icon_image' in request.FILES:
+                    social_network.icon_image = request.FILES['icon_image']
+                if 'logo' in request.FILES:
+                    social_network.logo = request.FILES['logo']
+                
+                social_network.save()
+                messages.success(request, 'Social network updated successfully')
+            except SocialNetwork.DoesNotExist:
+                messages.error(request, 'Social network not found')
+        elif action == 'delete':
+            network_id = request.POST.get('network_id')
+            try:
+                social_network = SocialNetwork.objects.get(id=network_id)
+                social_network.delete()
+                messages.success(request, 'Social network deleted successfully')
+            except SocialNetwork.DoesNotExist:
+                messages.error(request, 'Social network not found')
+        
+        # Preserve query parameters when redirecting
+        query_params = request.GET.urlencode()
+        redirect_url = 'admin_social_networks'
+        if query_params:
+            redirect_url += '?' + query_params
+        return redirect(redirect_url)
+    
+    # Sort by display_order, then name
+    social_networks = social_networks.order_by('display_order', 'name')
+    
+    # Pagination
+    per_page = request.GET.get('per_page', '25')
+    valid_per_page_options = ['10', '25', '50', '100', '200']
+    if per_page not in valid_per_page_options:
+        per_page = '25'
+    per_page_int = int(per_page)
+    
+    paginator = Paginator(social_networks, per_page_int)
+    page = request.GET.get('page', 1)
+    
+    try:
+        networks_page = paginator.page(page)
+    except PageNotAnInteger:
+        networks_page = paginator.page(1)
+    except EmptyPage:
+        networks_page = paginator.page(paginator.num_pages)
+    
+    context = {
+        'social_networks': networks_page,
+        'search': search,
+        'status_filter': status_filter,
+        'active_filter': active_filter,
+        'per_page': per_page,
+        'per_page_options': valid_per_page_options,
+        'platform_choices': SocialNetwork.PLATFORM_CHOICES,
+        'status_choices': SocialNetwork.STATUS_CHOICES,
+        'pending_tickets_count': Ticket.objects.filter(status__in=['open', 'in_progress']).count(),
+    }
+    return render(request, 'panel/admin/social_networks.html', context)
 
 # Admin Settings Management
 @login_required

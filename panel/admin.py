@@ -1,9 +1,10 @@
 from django.contrib import admin
+from django.utils.html import format_html
 from .models import (
     UserProfile, ServiceCategory, Service, Order, SubscriptionPackage,
     UserSubscription, Coupon, Payment, Ticket, TicketMessage,
     AffiliateCommission, BlogPost, SystemSetting, MarketingPromotion,
-    PromotionView, PromotionClick, PromotionConversion
+    PromotionView, PromotionClick, PromotionConversion, SocialNetwork
 )
 
 @admin.register(UserProfile)
@@ -254,3 +255,66 @@ class PromotionConversionAdmin(admin.ModelAdmin):
     
     def has_change_permission(self, request, obj=None):
         return False
+
+
+@admin.register(SocialNetwork)
+class SocialNetworkAdmin(admin.ModelAdmin):
+    list_display = [
+        'platform_code', 'name', 'name_km', 'status', 'is_active', 
+        'is_featured', 'display_order', 'get_icon_preview', 'created_at'
+    ]
+    list_filter = ['status', 'is_active', 'is_featured', 'platform_code', 'created_at']
+    search_fields = ['name', 'name_km', 'platform_code', 'description', 'description_km']
+    list_editable = ['is_active', 'is_featured', 'display_order', 'status']
+    readonly_fields = ['created_at', 'updated_at', 'get_icon_preview']
+    
+    fieldsets = (
+        ('Basic Information', {
+            'fields': (
+                'platform_code', 'name', 'name_km', 'description', 'description_km'
+            )
+        }),
+        ('Visual Elements', {
+            'fields': (
+                'icon', 'icon_image', 'get_icon_preview', 'color', 'logo'
+            )
+        }),
+        ('Configuration', {
+            'fields': (
+                'status', 'is_active', 'is_featured', 'display_order'
+            )
+        }),
+        ('Metadata', {
+            'fields': (
+                'website_url', 'documentation_url'
+            ),
+            'classes': ('collapse',)
+        }),
+        ('Timestamps', {
+            'fields': (
+                'created_at', 'updated_at'
+            ),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def get_icon_preview(self, obj):
+        """Display icon preview"""
+        if obj.icon_image:
+            return format_html(
+                '<img src="{}" style="max-height: 30px; max-width: 30px;" />',
+                obj.icon_image.url
+            )
+        elif obj.icon:
+            return format_html(
+                '<i class="{}" style="font-size: 24px; color: {};"></i>',
+                obj.icon, obj.color
+            )
+        elif obj.platform_code:
+            icon_class = obj.get_icon_class()
+            return format_html(
+                '<i class="{}" style="font-size: 24px; color: {};"></i>',
+                icon_class, obj.color
+            )
+        return '-'
+    get_icon_preview.short_description = 'Icon Preview'

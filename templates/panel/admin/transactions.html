@@ -31,8 +31,9 @@
                     <option value="user__username" {% if sort_by == 'user__username' %}selected{% endif %}>{% trans "User: A-Z" %}</option>
                     <option value="-user__username" {% if sort_by == '-user__username' %}selected{% endif %}>{% trans "User: Z-A" %}</option>
                 </select>
+                {% if per_page %}<input type="hidden" name="per_page" value="{{ per_page }}">{% endif %}
                 <button type="submit" class="btn-primary">{% trans "Filter" %}</button>
-                <a href="{% url 'admin_transactions_export' %}?{% if search %}search={{ search }}&{% endif %}{% if status_filter %}status={{ status_filter }}&{% endif %}{% if sort_by %}sort={{ sort_by }}{% endif %}" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-sm font-medium">
+                <a href="{% url 'admin_transactions_export' %}?{% if search %}search={{ search|urlencode }}&{% endif %}{% if status_filter %}status={{ status_filter }}&{% endif %}{% if sort_by %}sort={{ sort_by }}{% endif %}" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-sm font-medium">
                     {% trans "Export CSV" %}
                 </a>
             </div>
@@ -40,24 +41,40 @@
     </div>
     
     <div class="card-glass rounded-xl p-6">
+        <div class="mb-4 flex justify-between items-center flex-wrap gap-4">
+            <div class="text-sm text-gray-400">
+                {% trans "Showing" %} {{ transactions.start_index }} - {{ transactions.end_index }} {% trans "of" %} {{ transactions.paginator.count }} {% trans "transactions" %}
+            </div>
+            <form method="get" class="flex items-center gap-2">
+                {% if search %}<input type="hidden" name="search" value="{{ search }}">{% endif %}
+                {% if status_filter %}<input type="hidden" name="status" value="{{ status_filter }}">{% endif %}
+                {% if sort_by %}<input type="hidden" name="sort" value="{{ sort_by }}">{% endif %}
+                <label for="per_page" class="text-sm text-gray-400">{% trans "Items per page:" %}</label>
+                <select name="per_page" id="per_page" onchange="this.form.submit()" class="bg-slate-700 border border-slate-600 rounded-lg px-3 py-1 text-sm">
+                    {% for option in per_page_options %}
+                    <option value="{{ option }}" {% if per_page == option %}selected{% endif %}>{{ option }}</option>
+                    {% endfor %}
+                </select>
+            </form>
+        </div>
         <div class="overflow-x-auto">
             <table class="w-full">
                 <thead>
                     <tr class="border-b border-slate-700">
                         <th class="text-left py-3 px-4">
-                            <a href="?{% if search %}search={{ search }}&{% endif %}{% if status_filter %}status={{ status_filter }}&{% endif %}sort={% if sort_by == 'transaction_id' %}-transaction_id{% else %}transaction_id{% endif %}" class="hover:text-purple-400 flex items-center gap-1">
+                            <a href="?{% if search %}search={{ search|urlencode }}&{% endif %}{% if status_filter %}status={{ status_filter }}&{% endif %}{% if per_page %}per_page={{ per_page }}&{% endif %}sort={% if sort_by == 'transaction_id' %}-transaction_id{% else %}transaction_id{% endif %}" class="hover:text-purple-400 flex items-center gap-1">
                                 {% trans "Transaction ID" %}
                                 {% if sort_by == 'transaction_id' %}↑{% elif sort_by == '-transaction_id' %}↓{% endif %}
                             </a>
                         </th>
                         <th class="text-left py-3 px-4">
-                            <a href="?{% if search %}search={{ search }}&{% endif %}{% if status_filter %}status={{ status_filter }}&{% endif %}sort={% if sort_by == 'user__username' %}-user__username{% else %}user__username{% endif %}" class="hover:text-purple-400 flex items-center gap-1">
+                            <a href="?{% if search %}search={{ search|urlencode }}&{% endif %}{% if status_filter %}status={{ status_filter }}&{% endif %}{% if per_page %}per_page={{ per_page }}&{% endif %}sort={% if sort_by == 'user__username' %}-user__username{% else %}user__username{% endif %}" class="hover:text-purple-400 flex items-center gap-1">
                                 {% trans "User" %}
                                 {% if sort_by == 'user__username' %}↑{% elif sort_by == '-user__username' %}↓{% endif %}
                             </a>
                         </th>
                         <th class="text-left py-3 px-4">
-                            <a href="?{% if search %}search={{ search }}&{% endif %}{% if status_filter %}status={{ status_filter }}&{% endif %}sort={% if sort_by == '-amount' %}amount{% else %}-amount{% endif %}" class="hover:text-purple-400 flex items-center gap-1">
+                            <a href="?{% if search %}search={{ search|urlencode }}&{% endif %}{% if status_filter %}status={{ status_filter }}&{% endif %}{% if per_page %}per_page={{ per_page }}&{% endif %}sort={% if sort_by == '-amount' %}amount{% else %}-amount{% endif %}" class="hover:text-purple-400 flex items-center gap-1">
                                 {% trans "Amount" %}
                                 {% if sort_by == '-amount' %}↓{% elif sort_by == 'amount' %}↑{% endif %}
                             </a>
@@ -65,11 +82,12 @@
                         <th class="text-left py-3 px-4">{% trans "Method" %}</th>
                         <th class="text-left py-3 px-4">{% trans "Status" %}</th>
                         <th class="text-left py-3 px-4">
-                            <a href="?{% if search %}search={{ search }}&{% endif %}{% if status_filter %}status={{ status_filter }}&{% endif %}sort={% if sort_by == '-created_at' %}created_at{% else %}-created_at{% endif %}" class="hover:text-purple-400 flex items-center gap-1">
+                            <a href="?{% if search %}search={{ search|urlencode }}&{% endif %}{% if status_filter %}status={{ status_filter }}&{% endif %}{% if per_page %}per_page={{ per_page }}&{% endif %}sort={% if sort_by == '-created_at' %}created_at{% else %}-created_at{% endif %}" class="hover:text-purple-400 flex items-center gap-1">
                                 {% trans "Date" %}
                                 {% if sort_by == '-created_at' %}↓{% elif sort_by == 'created_at' %}↑{% endif %}
                             </a>
                         </th>
+                        <th class="text-left py-3 px-4">{% trans "Actions" %}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -88,16 +106,219 @@
                             </span>
                         </td>
                         <td class="py-3 px-4 text-sm text-gray-400">{{ transaction.created_at|date:"M d, Y H:i" }}</td>
+                        <td class="py-3 px-4">
+                            {% with gateway_id=transaction.transaction_id|slugify|add:"-gateway" %}
+                            <button 
+                                class="px-3 py-1 bg-purple-600 hover:bg-purple-700 rounded text-sm font-medium view-details-btn"
+                                data-transaction-id="{{ transaction.transaction_id }}"
+                                data-user="{{ transaction.user.username|escapejs }}"
+                                data-email="{{ transaction.user.email|escapejs }}"
+                                data-amount="{{ transaction.amount|floatformat:2 }}"
+                                data-method="{{ transaction.get_method_display|escapejs }}"
+                                data-status="{{ transaction.get_status_display|escapejs }}"
+                                data-gateway-payment-id="{{ transaction.gateway_payment_id|default:'N/A'|escapejs }}"
+                                data-created-at="{{ transaction.created_at|date:'M d, Y H:i:s' }}"
+                                data-completed-at="{% if transaction.completed_at %}{{ transaction.completed_at|date:'M d, Y H:i:s' }}{% else %}N/A{% endif %}"
+                                data-gateway-response-id="{{ gateway_id }}">
+                                {% trans "View Details" %}
+                            </button>
+                            {{ transaction.gateway_response|json_script:gateway_id }}
+                            {% endwith %}
+                        </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="6" class="py-8 text-center text-gray-400">{% trans "No transactions found" %}</td>
+                        <td colspan="7" class="py-8 text-center text-gray-400">{% trans "No transactions found" %}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
+        
+        <!-- Pagination -->
+        {% if transactions.has_other_pages %}
+        <div class="mt-6 flex items-center justify-between flex-wrap gap-4">
+            <div class="text-sm text-gray-400">
+                {% trans "Page" %} {{ transactions.number }} {% trans "of" %} {{ transactions.paginator.num_pages }}
+            </div>
+            <div class="flex gap-2 flex-wrap">
+                {% if transactions.has_previous %}
+                <a href="?page=1{% if search %}&search={{ search|urlencode }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm">
+                    {% trans "First" %}
+                </a>
+                <a href="?page={{ transactions.previous_page_number }}{% if search %}&search={{ search|urlencode }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm">
+                    {% trans "Previous" %}
+                </a>
+                {% endif %}
+                
+                {% for num in transactions.paginator.page_range %}
+                    {% if transactions.number == num %}
+                    <span class="px-3 py-2 bg-purple-600 rounded-lg text-sm">{{ num }}</span>
+                    {% elif num > transactions.number|add:'-3' and num < transactions.number|add:'3' %}
+                    <a href="?page={{ num }}{% if search %}&search={{ search|urlencode }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm">
+                        {{ num }}
+                    </a>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if transactions.has_next %}
+                <a href="?page={{ transactions.next_page_number }}{% if search %}&search={{ search|urlencode }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm">
+                    {% trans "Next" %}
+                </a>
+                <a href="?page={{ transactions.paginator.num_pages }}{% if search %}&search={{ search|urlencode }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm">
+                    {% trans "Last" %}
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
     </div>
 </div>
+
+<!-- Transaction Details Modal -->
+<div id="transactionModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm items-center justify-center z-50" onclick="this.classList.add('hidden')">
+    <div class="bg-slate-800 rounded-xl p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl font-bold">{% trans "Transaction Details" %}</h2>
+            <button onclick="closeTransactionModal()" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+        </div>
+        
+        <div class="space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-400 mb-1">{% trans "Transaction ID" %}</label>
+                    <p class="text-white font-mono" id="modal_transaction_id">-</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-400 mb-1">{% trans "Status" %}</label>
+                    <p class="text-white" id="modal_status">-</p>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-400 mb-1">{% trans "User" %}</label>
+                    <p class="text-white" id="modal_user">-</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-400 mb-1">{% trans "Email" %}</label>
+                    <p class="text-white" id="modal_email">-</p>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-400 mb-1">{% trans "Amount" %}</label>
+                    <p class="text-white font-semibold text-lg" id="modal_amount">-</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-400 mb-1">{% trans "Payment Method" %}</label>
+                    <p class="text-white" id="modal_method">-</p>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-400 mb-1">{% trans "Gateway Payment ID" %}</label>
+                    <p class="text-white font-mono text-sm" id="modal_gateway_payment_id">-</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-400 mb-1">{% trans "Created At" %}</label>
+                    <p class="text-white text-sm" id="modal_created_at">-</p>
+                </div>
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-400 mb-1">{% trans "Completed At" %}</label>
+                <p class="text-white text-sm" id="modal_completed_at">-</p>
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-400 mb-2">{% trans "Gateway Response" %}</label>
+                <pre class="bg-slate-900 rounded-lg p-4 text-xs text-gray-300 overflow-x-auto" id="modal_gateway_response">-</pre>
+            </div>
+        </div>
+        
+        <div class="mt-6 flex justify-end">
+            <button type="button" onclick="closeTransactionModal()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg">
+                {% trans "Close" %}
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    function showTransactionModal(button) {
+        const data = {
+            transaction_id: button.getAttribute('data-transaction-id') || '-',
+            user: button.getAttribute('data-user') || '-',
+            email: button.getAttribute('data-email') || '-',
+            amount: button.getAttribute('data-amount') || '0.00',
+            method: button.getAttribute('data-method') || '-',
+            status: button.getAttribute('data-status') || '-',
+            gateway_payment_id: button.getAttribute('data-gateway-payment-id') || '-',
+            created_at: button.getAttribute('data-created-at') || '-',
+            completed_at: button.getAttribute('data-completed-at') || '-',
+            gateway_response_id: button.getAttribute('data-gateway-response-id')
+        };
+        
+        document.getElementById('modal_transaction_id').textContent = data.transaction_id;
+        document.getElementById('modal_user').textContent = data.user;
+        document.getElementById('modal_email').textContent = data.email;
+        document.getElementById('modal_amount').textContent = '$' + data.amount;
+        document.getElementById('modal_method').textContent = data.method;
+        document.getElementById('modal_status').textContent = data.status;
+        document.getElementById('modal_gateway_payment_id').textContent = data.gateway_payment_id;
+        document.getElementById('modal_created_at').textContent = data.created_at;
+        document.getElementById('modal_completed_at').textContent = data.completed_at;
+        
+        // Get gateway response from JSON script tag
+        let gatewayResponse = {};
+        if (data.gateway_response_id) {
+            const scriptElement = document.getElementById(data.gateway_response_id);
+            if (scriptElement) {
+                try {
+                    gatewayResponse = JSON.parse(scriptElement.textContent);
+                } catch (e) {
+                    console.error('Error parsing gateway response:', e);
+                }
+            }
+        }
+        
+        // Format and display gateway response
+        if (gatewayResponse && Object.keys(gatewayResponse).length > 0) {
+            document.getElementById('modal_gateway_response').textContent = JSON.stringify(gatewayResponse, null, 2);
+        } else {
+            document.getElementById('modal_gateway_response').textContent = 'No gateway response data';
+        }
+        
+        const modal = document.getElementById('transactionModal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+    
+    function closeTransactionModal() {
+        const modal = document.getElementById('transactionModal');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+    
+    // Add event listeners to all view details buttons
+    document.addEventListener('DOMContentLoaded', function() {
+        const buttons = document.querySelectorAll('.view-details-btn');
+        buttons.forEach(function(button) {
+            button.addEventListener('click', function() {
+                showTransactionModal(button);
+            });
+        });
+    });
+    
+    // Close modal on Escape key
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            closeTransactionModal();
+        }
+    });
+</script>
 {% endblock %}
 

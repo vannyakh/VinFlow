@@ -611,3 +611,85 @@ class PromotionConversion(models.Model):
     
     def __str__(self):
         return f"{self.promotion.promotion_id} - {self.conversion_type} by {self.user.username}"
+
+
+# Social Network Models
+class SocialNetwork(models.Model):
+    """
+    Model for managing social network platform configurations
+    """
+    PLATFORM_CHOICES = [
+        ('ig', 'Instagram'),
+        ('fb', 'Facebook'),
+        ('tt', 'TikTok'),
+        ('yt', 'YouTube'),
+        ('tw', 'Twitter/X'),
+        ('sp', 'Spotify'),
+        ('li', 'LinkedIn'),
+        ('dc', 'Discord'),
+        ('sc', 'Snapchat'),
+        ('twitch', 'Twitch'),
+        ('tg', 'Telegram'),
+        ('google', 'Google'),
+        ('sh', 'Shopee'),
+        ('web', 'Website Traffic'),
+        ('review', 'Reviews'),
+        ('other', 'Others'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('active', 'Active'),
+        ('inactive', 'Inactive'),
+        ('maintenance', 'Under Maintenance'),
+        ('deprecated', 'Deprecated'),
+    ]
+    
+    platform_code = models.CharField(max_length=20, unique=True, choices=PLATFORM_CHOICES)
+    name = models.CharField(max_length=100, help_text="Display name")
+    name_km = models.CharField(max_length=100, blank=True, help_text="Khmer translation")
+    description = models.TextField(blank=True, help_text="Platform description")
+    description_km = models.TextField(blank=True, help_text="Khmer description")
+    
+    # Visual elements
+    icon = models.CharField(max_length=100, blank=True, help_text="Icon class or path")
+    icon_image = models.ImageField(upload_to='social_networks/icons/', blank=True, null=True)
+    color = models.CharField(max_length=7, default='#000000', help_text="Brand color (hex)")
+    logo = models.ImageField(upload_to='social_networks/logos/', blank=True, null=True)
+    
+    # Configuration
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
+    is_active = models.BooleanField(default=True, help_text="Available for orders")
+    is_featured = models.BooleanField(default=False, help_text="Show in featured section")
+    display_order = models.IntegerField(default=0, help_text="Display order in lists")
+    
+    # Metadata
+    website_url = models.URLField(blank=True, help_text="Official website")
+    documentation_url = models.URLField(blank=True, help_text="API documentation")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['display_order', 'name']
+        verbose_name = "Social Network"
+        verbose_name_plural = "Social Networks"
+    
+    def __str__(self):
+        return f"{self.name} ({self.platform_code})"
+    
+    def get_icon_class(self):
+        """Get icon class for common platforms"""
+        icon_map = {
+            'ig': 'fab fa-instagram',
+            'fb': 'fab fa-facebook',
+            'tt': 'fab fa-tiktok',
+            'yt': 'fab fa-youtube',
+            'tw': 'fab fa-twitter',
+            'sp': 'fab fa-spotify',
+            'li': 'fab fa-linkedin',
+            'dc': 'fab fa-discord',
+            'sc': 'fab fa-snapchat',
+            'twitch': 'fab fa-twitch',
+            'tg': 'fab fa-telegram',
+            'google': 'fab fa-google',
+        }
+        return icon_map.get(self.platform_code, 'fas fa-globe')
