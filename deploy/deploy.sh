@@ -212,6 +212,17 @@ check_status() {
     fi
 }
 
+# Safely read a value from .env file
+get_env_value() {
+    local key=$1
+    local env_file="${PROJECT_DIR}/.env"
+    
+    if [ -f "$env_file" ]; then
+        # Use grep to find the line, then extract the value after =
+        grep "^${key}=" "$env_file" | cut -d '=' -f 2- | tr -d '\r\n' | tr -d '"' | tr -d "'"
+    fi
+}
+
 # Create backup
 create_backup() {
     print_message "Creating database backup..."
@@ -221,50 +232,63 @@ create_backup() {
     TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
     BACKUP_FILE="${BACKUP_DIR}/backup_${TIMESTAMP}.sql"
     
-    # Load environment variables safely
+    # Load environment variables safely using our helper function
     if [ -f "${PROJECT_DIR}/.env" ]; then
-        # Export variables from .env file, filtering out comments and empty lines
-        set -a
-        source <(cat ${PROJECT_DIR}/.env | grep -v '^#' | grep -v '^$' | sed 's/\r$//')
-        set +a
+        # Read database configuration from .env
+        DB_ENGINE=$(get_env_value "DB_ENGINE")
+        DB_NAME=$(get_env_value "DB_NAME")
+        DB_USER=$(get_env_value "DB_USER")
+        DB_PASSWORD=$(get_env_value "DB_PASSWORD")
+        DB_HOST=$(get_env_value "DB_HOST")
+        
+        # Set default host if not specified
+        DB_HOST=${DB_HOST:-localhost}
         
         # Check database type and create appropriate backup
         if [ ! -z "${DB_NAME}" ]; then
             if [[ "${DB_ENGINE}" == *"postgresql"* ]]; then
                 # PostgreSQL backup
                 print_info "Creating PostgreSQL backup..."
-                PGPASSWORD=${DB_PASSWORD} pg_dump -U ${DB_USER} -h ${DB_HOST:-localhost} ${DB_NAME} > ${BACKUP_FILE} 2>/dev/null
-                if [ $? -eq 0 ]; then
-                    gzip ${BACKUP_FILE}
-                    print_message "Backup created: ${BACKUP_FILE}.gz"
+                if command -v pg_dump &> /dev/null; then
+                    PGPASSWORD="${DB_PASSWORD}" pg_dump -U "${DB_USER}" -h "${DB_HOST}" "${DB_NAME}" > "${BACKUP_FILE}" 2>/dev/null
+                    if [ $? -eq 0 ]; then
+                        gzip "${BACKUP_FILE}"
+                        print_message "Backup created: ${BACKUP_FILE}.gz"
+                    else
+                        print_warning "PostgreSQL backup failed"
+                        rm -f "${BACKUP_FILE}"
+                    fi
                 else
-                    print_warning "PostgreSQL backup failed or pg_dump not available"
-                    rm -f ${BACKUP_FILE}
+                    print_warning "pg_dump not found, skipping PostgreSQL backup"
                 fi
             elif [[ "${DB_ENGINE}" == *"mysql"* ]]; then
                 # MySQL backup
                 print_info "Creating MySQL backup..."
-                mysqldump -u ${DB_USER} -p${DB_PASSWORD} -h ${DB_HOST:-localhost} ${DB_NAME} > ${BACKUP_FILE} 2>/dev/null
-                if [ $? -eq 0 ]; then
-                    gzip ${BACKUP_FILE}
-                    print_message "Backup created: ${BACKUP_FILE}.gz"
+                if command -v mysqldump &> /dev/null; then
+                    mysqldump -u "${DB_USER}" -p"${DB_PASSWORD}" -h "${DB_HOST}" "${DB_NAME}" > "${BACKUP_FILE}" 2>/dev/null
+                    if [ $? -eq 0 ]; then
+                        gzip "${BACKUP_FILE}"
+                        print_message "Backup created: ${BACKUP_FILE}.gz"
+                    else
+                        print_warning "MySQL backup failed"
+                        rm -f "${BACKUP_FILE}"
+                    fi
                 else
-                    print_warning "MySQL backup failed or mysqldump not available"
-                    rm -f ${BACKUP_FILE}
+                    print_warning "mysqldump not found, skipping MySQL backup"
                 fi
             else
                 # SQLite backup
                 if [ -f "${PROJECT_DIR}/db.sqlite3" ]; then
                     print_info "Creating SQLite backup..."
-                    cp ${PROJECT_DIR}/db.sqlite3 ${BACKUP_DIR}/db_${TIMESTAMP}.sqlite3
-                    gzip ${BACKUP_DIR}/db_${TIMESTAMP}.sqlite3
+                    cp "${PROJECT_DIR}/db.sqlite3" "${BACKUP_DIR}/db_${TIMESTAMP}.sqlite3"
+                    gzip "${BACKUP_DIR}/db_${TIMESTAMP}.sqlite3"
                     print_message "Backup created: ${BACKUP_DIR}/db_${TIMESTAMP}.sqlite3.gz"
                 else
-                    print_info "No database file to backup (SQLite)"
+                    print_info "No SQLite database file found"
                 fi
             fi
         else
-            print_info "No database configured, skipping backup"
+            print_info "No database name configured, skipping backup"
         fi
     else
         print_warning "No .env file found, skipping database backup"
