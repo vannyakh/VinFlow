@@ -1,8 +1,8 @@
 #!/bin/bash
 
 ###############################################################################
-# VinFlow Django Application Deployment Script for Vultr
-# This script automates the deployment process
+# VinFlow Django Application Deployment Script for aaPanel
+# This script automates the deployment process on aaPanel
 ###############################################################################
 
 set -e  # Exit on error
@@ -11,14 +11,17 @@ set -e  # Exit on error
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Configuration
+# Configuration - Update these values for your aaPanel setup
 PROJECT_NAME="vinflow"
-PROJECT_DIR="/var/www/${PROJECT_NAME}"
+# aaPanel typically uses /www/wwwroot/ for web projects
+PROJECT_DIR="/www/wwwroot/${PROJECT_NAME}"
 VENV_DIR="${PROJECT_DIR}/venv"
 GIT_REPO="https://github.com/vannyakh/vinflow.git"  # Update this
 BRANCH="main"
+AAPANEL_USER="www"  # Default aaPanel user, change if different
 
 # Print colored message
 print_message() {
@@ -33,10 +36,28 @@ print_warning() {
     echo -e "${YELLOW}WARNING:${NC} $1"
 }
 
-# Check if running as root or with sudo
-check_root() {
-    if [[ $EUID -ne 0 ]]; then
-        print_error "This script must be run as root or with sudo"
+print_info() {
+    echo -e "${BLUE}INFO:${NC} $1"
+}
+
+# Check if aaPanel is installed
+check_aapanel() {
+    if [ ! -d "/www/server/panel" ]; then
+        print_warning "aaPanel directory not found at /www/server/panel"
+        print_info "This script assumes aaPanel is installed. Continuing anyway..."
+    else
+        print_message "aaPanel detected"
+    fi
+}
+
+# Check if project directory exists
+check_project_dir() {
+    if [ ! -d "${PROJECT_DIR}" ]; then
+        print_error "Project directory ${PROJECT_DIR} not found!"
+        print_info "Please create the project in aaPanel first:"
+        print_info "1. Go to aaPanel > Website > Python Project"
+        print_info "2. Add a new Python project"
+        print_info "3. Set the project path to ${PROJECT_DIR}"
         exit 1
     fi
 }
@@ -49,8 +70,10 @@ pull_code() {
     if [ -d ".git" ]; then
         git fetch origin ${BRANCH}
         git reset --hard origin/${BRANCH}
+        print_message "Code updated to latest ${BRANCH} branch"
     else
         print_error "Git repository not found. Please clone it first."
+        print_info "Run: git clone ${GIT_REPO} ${PROJECT_DIR}"
         exit 1
     fi
 }
@@ -58,9 +81,17 @@ pull_code() {
 # Install/Update Python dependencies
 install_dependencies() {
     print_message "Installing Python dependencies..."
+    
+    if [ ! -d "${VENV_DIR}" ]; then
+        print_warning "Virtual environment not found at ${VENV_DIR}"
+        print_info "Creating virtual environment..."
+        python3 -m venv ${VENV_DIR}
+    fi
+    
     source ${VENV_DIR}/bin/activate
     pip install --upgrade pip
     pip install -r ${PROJECT_DIR}/requirements.txt
+    print_message "Dependencies installed successfully"
 }
 
 # Collect static files
@@ -69,6 +100,7 @@ collect_static() {
     source ${VENV_DIR}/bin/activate
     cd ${PROJECT_DIR}
     python manage.py collectstatic --noinput
+    print_message "Static files collected"
 }
 
 # Run database migrations
@@ -77,6 +109,7 @@ run_migrations() {
     source ${VENV_DIR}/bin/activate
     cd ${PROJECT_DIR}
     python manage.py migrate --noinput
+    print_message "Database migrations completed"
 }
 
 # Compile translation messages
@@ -84,48 +117,105 @@ compile_messages() {
     print_message "Compiling translation messages..."
     source ${VENV_DIR}/bin/activate
     cd ${PROJECT_DIR}
-    python manage.py compilemessages
+    
+    if [ -d "locale" ]; then
+        python manage.py compilemessages
+        print_message "Translation messages compiled"
+    else
+        print_warning "No locale directory found, skipping message compilation"
+    fi
 }
 
-# Set proper permissions
+# Set proper permissions for aaPanel
 set_permissions() {
     print_message "Setting proper file permissions..."
-    chown -R www-data:www-data ${PROJECT_DIR}
-    chmod -R 755 ${PROJECT_DIR}
     
-    # Make sure media and log directories are writable
-    chmod -R 775 ${PROJECT_DIR}/media
-    chmod -R 775 /var/log/${PROJECT_NAME}
+    # Set ownership to aaPanel user
+    chown -R ${AAPANEL_USER}:${AAPANEL_USER} ${PROJECT_DIR}
+    
+    # Set directory permissions
+    find ${PROJECT_DIR} -type d -exec chmod 755 {} \;
+    
+    # Set file permissions
+    find ${PROJECT_DIR} -type f -exec chmod 644 {} \;
+    
+    # Make scripts executable
+    if [ -f "${PROJECT_DIR}/manage.py" ]; then
+        chmod +x ${PROJECT_DIR}/manage.py
+    fi
+    
+    # Make sure media directory is writable
+    if [ -d "${PROJECT_DIR}/media" ]; then
+        chmod -R 775 ${PROJECT_DIR}/media
+    fi
+    
+    # Make sure log directories are writable if they exist
+    if [ -d "${PROJECT_DIR}/logs" ]; then
+        chmod -R 775 ${PROJECT_DIR}/logs
+    fi
+    
+    print_message "Permissions set successfully"
 }
 
-# Restart services
-restart_services() {
-    print_message "Restarting services..."
-    systemctl restart ${PROJECT_NAME}-gunicorn
-    systemctl restart ${PROJECT_NAME}-celery
-    systemctl restart ${PROJECT_NAME}-celerybeat
-    systemctl restart nginx
+# Restart Python application in aaPanel
+restart_application() {
+    print_message "Restarting Python application..."
+    
+    # Try to restart using aaPanel CLI if available
+    if command -v bt &> /dev/null; then
+        print_info "Using aaPanel CLI to restart application..."
+        bt restart
+    else
+        print_warning "aaPanel CLI not found"
+        print_info "Please restart the application manually in aaPanel:"
+        print_info "1. Go to aaPanel > Website > Python Project"
+        print_info "2. Find '${PROJECT_NAME}' and click 'Restart'"
+    fi
+    
+    # Kill any existing Gunicorn processes for this project
+    print_info "Stopping existing Gunicorn processes..."
+    pkill -f "gunicorn.*${PROJECT_NAME}" || true
+    
+    # Restart Celery workers if they exist
+    if [ -f "${PROJECT_DIR}/celery.pid" ]; then
+        print_info "Restarting Celery workers..."
+        pkill -f "celery.*${PROJECT_NAME}" || true
+        rm -f ${PROJECT_DIR}/celery.pid
+    fi
+    
+    print_message "Application restart initiated"
 }
 
-# Check service status
-check_services() {
-    print_message "Checking service status..."
+# Check application status
+check_status() {
+    print_message "Checking application status..."
     
-    services=("${PROJECT_NAME}-gunicorn" "${PROJECT_NAME}-celery" "${PROJECT_NAME}-celerybeat" "nginx")
+    # Check if Gunicorn is running
+    if pgrep -f "gunicorn.*${PROJECT_NAME}" > /dev/null; then
+        echo -e "${GREEN}✓${NC} Gunicorn is running"
+    else
+        echo -e "${YELLOW}⚠${NC} Gunicorn process not found"
+    fi
     
-    for service in "${services[@]}"; do
-        if systemctl is-active --quiet ${service}; then
-            echo -e "${GREEN}✓${NC} ${service} is running"
-        else
-            echo -e "${RED}✗${NC} ${service} is not running"
-        fi
-    done
+    # Check if Celery is running
+    if pgrep -f "celery.*${PROJECT_NAME}" > /dev/null; then
+        echo -e "${GREEN}✓${NC} Celery is running"
+    else
+        echo -e "${YELLOW}⚠${NC} Celery process not found (may be optional)"
+    fi
+    
+    # Check if Redis is running (if used)
+    if pgrep -f "redis-server" > /dev/null; then
+        echo -e "${GREEN}✓${NC} Redis is running"
+    else
+        echo -e "${YELLOW}⚠${NC} Redis process not found (may be optional)"
+    fi
 }
 
 # Create backup
 create_backup() {
     print_message "Creating database backup..."
-    BACKUP_DIR="/var/backups/${PROJECT_NAME}"
+    BACKUP_DIR="${PROJECT_DIR}/backups"
     mkdir -p ${BACKUP_DIR}
     
     TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
@@ -133,20 +223,75 @@ create_backup() {
     
     # Source environment variables
     if [ -f "${PROJECT_DIR}/.env" ]; then
-        export $(cat ${PROJECT_DIR}/.env | grep -v '^#' | xargs)
-        pg_dump -U ${DB_USER} -h ${DB_HOST} ${DB_NAME} > ${BACKUP_FILE}
-        gzip ${BACKUP_FILE}
-        print_message "Backup created: ${BACKUP_FILE}.gz"
+        source ${PROJECT_DIR}/.env
+        
+        # Check database type and create appropriate backup
+        if [ ! -z "${DB_NAME}" ]; then
+            if [ "${DB_ENGINE}" == "django.db.backends.postgresql" ]; then
+                # PostgreSQL backup
+                print_info "Creating PostgreSQL backup..."
+                PGPASSWORD=${DB_PASSWORD} pg_dump -U ${DB_USER} -h ${DB_HOST:-localhost} ${DB_NAME} > ${BACKUP_FILE}
+                gzip ${BACKUP_FILE}
+                print_message "Backup created: ${BACKUP_FILE}.gz"
+            elif [ "${DB_ENGINE}" == "django.db.backends.mysql" ]; then
+                # MySQL backup
+                print_info "Creating MySQL backup..."
+                mysqldump -u ${DB_USER} -p${DB_PASSWORD} -h ${DB_HOST:-localhost} ${DB_NAME} > ${BACKUP_FILE}
+                gzip ${BACKUP_FILE}
+                print_message "Backup created: ${BACKUP_FILE}.gz"
+            else
+                # SQLite backup
+                if [ -f "${PROJECT_DIR}/db.sqlite3" ]; then
+                    print_info "Creating SQLite backup..."
+                    cp ${PROJECT_DIR}/db.sqlite3 ${BACKUP_DIR}/db_${TIMESTAMP}.sqlite3
+                    gzip ${BACKUP_DIR}/db_${TIMESTAMP}.sqlite3
+                    print_message "Backup created: ${BACKUP_DIR}/db_${TIMESTAMP}.sqlite3.gz"
+                fi
+            fi
+        fi
     else
         print_warning "No .env file found, skipping database backup"
     fi
+    
+    # Keep only last 10 backups
+    print_info "Cleaning old backups (keeping last 10)..."
+    ls -t ${BACKUP_DIR}/backup_*.sql.gz 2>/dev/null | tail -n +11 | xargs rm -f 2>/dev/null || true
+    ls -t ${BACKUP_DIR}/db_*.sqlite3.gz 2>/dev/null | tail -n +11 | xargs rm -f 2>/dev/null || true
+}
+
+# Display post-deployment instructions
+post_deployment_info() {
+    print_message "Post-deployment checklist:"
+    echo ""
+    echo -e "${BLUE}1.${NC} Verify the application in aaPanel:"
+    echo "   - Go to: Website > Python Project"
+    echo "   - Check '${PROJECT_NAME}' status"
+    echo ""
+    echo -e "${BLUE}2.${NC} Test your application:"
+    echo "   - Visit your domain in a browser"
+    echo "   - Check all main features work correctly"
+    echo ""
+    echo -e "${BLUE}3.${NC} Monitor logs:"
+    echo "   - Check aaPanel logs: /www/wwwlogs/"
+    echo "   - Check application logs: ${PROJECT_DIR}/logs/"
+    echo ""
+    echo -e "${BLUE}4.${NC} If application doesn't start:"
+    echo "   - Check aaPanel Python Project settings"
+    echo "   - Verify .env file exists and is correct"
+    echo "   - Check file permissions"
+    echo "   - Review error logs"
 }
 
 # Main deployment function
 main() {
-    print_message "Starting deployment of VinFlow application..."
+    echo ""
+    print_message "╔════════════════════════════════════════════╗"
+    print_message "║  VinFlow Deployment Script for aaPanel    ║"
+    print_message "╚════════════════════════════════════════════╝"
+    echo ""
     
-    check_root
+    check_aapanel
+    check_project_dir
     create_backup
     pull_code
     install_dependencies
@@ -154,11 +299,18 @@ main() {
     compile_messages
     collect_static
     set_permissions
-    restart_services
-    check_services
+    restart_application
     
-    print_message "Deployment completed successfully!"
-    print_message "Access your application at: https://your-domain.com"
+    echo ""
+    check_status
+    echo ""
+    
+    print_message "═══════════════════════════════════════════"
+    print_message "Deployment completed successfully! 🎉"
+    print_message "═══════════════════════════════════════════"
+    echo ""
+    
+    post_deployment_info
 }
 
 # Run main function
