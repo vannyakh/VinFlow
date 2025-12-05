@@ -119,10 +119,22 @@ compile_messages() {
     cd ${PROJECT_DIR}
     
     if [ -d "locale" ]; then
-        python manage.py compilemessages
-        print_message "Translation messages compiled"
+        # Try to compile messages, but don't fail if there are errors
+        # Use --ignore flag to skip problematic files
+        python manage.py compilemessages --ignore=venv/* --ignore=env/* 2>&1 | tee /tmp/compilemessages.log
+        
+        # Check if compilation was successful
+        if grep -q "CommandError" /tmp/compilemessages.log; then
+            print_warning "Some translation files had issues, but continuing..."
+            print_info "You can manually fix translations later if needed"
+        else
+            print_message "Translation messages compiled successfully"
+        fi
+        
+        # Clean up log
+        rm -f /tmp/compilemessages.log
     else
-        print_warning "No locale directory found, skipping message compilation"
+        print_info "No locale directory found, skipping message compilation"
     fi
 }
 
