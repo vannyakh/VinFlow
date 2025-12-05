@@ -221,24 +221,37 @@ create_backup() {
     TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
     BACKUP_FILE="${BACKUP_DIR}/backup_${TIMESTAMP}.sql"
     
-    # Source environment variables
+    # Load environment variables safely
     if [ -f "${PROJECT_DIR}/.env" ]; then
-        source ${PROJECT_DIR}/.env
+        # Export variables from .env file, filtering out comments and empty lines
+        set -a
+        source <(cat ${PROJECT_DIR}/.env | grep -v '^#' | grep -v '^$' | sed 's/\r$//')
+        set +a
         
         # Check database type and create appropriate backup
         if [ ! -z "${DB_NAME}" ]; then
-            if [ "${DB_ENGINE}" == "django.db.backends.postgresql" ]; then
+            if [[ "${DB_ENGINE}" == *"postgresql"* ]]; then
                 # PostgreSQL backup
                 print_info "Creating PostgreSQL backup..."
-                PGPASSWORD=${DB_PASSWORD} pg_dump -U ${DB_USER} -h ${DB_HOST:-localhost} ${DB_NAME} > ${BACKUP_FILE}
-                gzip ${BACKUP_FILE}
-                print_message "Backup created: ${BACKUP_FILE}.gz"
-            elif [ "${DB_ENGINE}" == "django.db.backends.mysql" ]; then
+                PGPASSWORD=${DB_PASSWORD} pg_dump -U ${DB_USER} -h ${DB_HOST:-localhost} ${DB_NAME} > ${BACKUP_FILE} 2>/dev/null
+                if [ $? -eq 0 ]; then
+                    gzip ${BACKUP_FILE}
+                    print_message "Backup created: ${BACKUP_FILE}.gz"
+                else
+                    print_warning "PostgreSQL backup failed or pg_dump not available"
+                    rm -f ${BACKUP_FILE}
+                fi
+            elif [[ "${DB_ENGINE}" == *"mysql"* ]]; then
                 # MySQL backup
                 print_info "Creating MySQL backup..."
-                mysqldump -u ${DB_USER} -p${DB_PASSWORD} -h ${DB_HOST:-localhost} ${DB_NAME} > ${BACKUP_FILE}
-                gzip ${BACKUP_FILE}
-                print_message "Backup created: ${BACKUP_FILE}.gz"
+                mysqldump -u ${DB_USER} -p${DB_PASSWORD} -h ${DB_HOST:-localhost} ${DB_NAME} > ${BACKUP_FILE} 2>/dev/null
+                if [ $? -eq 0 ]; then
+                    gzip ${BACKUP_FILE}
+                    print_message "Backup created: ${BACKUP_FILE}.gz"
+                else
+                    print_warning "MySQL backup failed or mysqldump not available"
+                    rm -f ${BACKUP_FILE}
+                fi
             else
                 # SQLite backup
                 if [ -f "${PROJECT_DIR}/db.sqlite3" ]; then
@@ -246,8 +259,12 @@ create_backup() {
                     cp ${PROJECT_DIR}/db.sqlite3 ${BACKUP_DIR}/db_${TIMESTAMP}.sqlite3
                     gzip ${BACKUP_DIR}/db_${TIMESTAMP}.sqlite3
                     print_message "Backup created: ${BACKUP_DIR}/db_${TIMESTAMP}.sqlite3.gz"
+                else
+                    print_info "No database file to backup (SQLite)"
                 fi
             fi
+        else
+            print_info "No database configured, skipping backup"
         fi
     else
         print_warning "No .env file found, skipping database backup"
