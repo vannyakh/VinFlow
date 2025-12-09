@@ -1,0 +1,105 @@
+# Docker Makefile for VinFlow (Root Directory Wrapper)
+# This wrapper delegates to Docker/Makefile
+
+COMPOSE_FILE := Docker/docker-compose.yml
+COMPOSE_PROD_FILE := Docker/docker-compose.prod.yml
+
+.PHONY: help build up down restart logs shell migrate makemigrations createsuperuser test clean
+
+help: ## Show this help message
+	@echo 'Usage: make -f Makefile.docker [target]'
+	@echo ''
+	@echo 'Available targets:'
+	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  %-20s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+
+build: ## Build Docker images
+	docker-compose -f $(COMPOSE_FILE) build
+
+up: ## Start all services
+	docker-compose -f $(COMPOSE_FILE) up -d
+
+up-build: ## Build and start all services
+	docker-compose -f $(COMPOSE_FILE) up -d --build
+
+down: ## Stop all services
+	docker-compose -f $(COMPOSE_FILE) down
+
+restart: ## Restart all services
+	docker-compose -f $(COMPOSE_FILE) restart
+
+logs: ## Show logs from all services
+	docker-compose -f $(COMPOSE_FILE) logs -f
+
+logs-web: ## Show logs from web service
+	docker-compose -f $(COMPOSE_FILE) logs -f web
+
+logs-celery: ## Show logs from celery worker
+	docker-compose -f $(COMPOSE_FILE) logs -f celery_worker
+
+shell: ## Open Django shell
+	docker-compose -f $(COMPOSE_FILE) exec web python manage.py shell
+
+bash: ## Open bash shell in web container
+	docker-compose -f $(COMPOSE_FILE) exec web bash
+
+migrate: ## Run database migrations
+	docker-compose -f $(COMPOSE_FILE) exec web python manage.py migrate
+
+makemigrations: ## Create new migrations
+	docker-compose -f $(COMPOSE_FILE) exec web python manage.py makemigrations
+
+createsuperuser: ## Create Django superuser
+	docker-compose -f $(COMPOSE_FILE) exec web python manage.py createsuperuser
+
+collectstatic: ## Collect static files
+	docker-compose -f $(COMPOSE_FILE) exec web python manage.py collectstatic --noinput
+
+test: ## Run tests
+	docker-compose -f $(COMPOSE_FILE) exec web python manage.py test
+
+db-shell: ## Open PostgreSQL shell
+	docker-compose -f $(COMPOSE_FILE) exec db psql -U postgres -d vinflow_dev
+
+redis-cli: ## Open Redis CLI
+	docker-compose -f $(COMPOSE_FILE) exec redis redis-cli
+
+backup-db: ## Backup database to file
+	docker-compose -f $(COMPOSE_FILE) exec db pg_dump -U postgres vinflow_dev > backup_$(shell date +%Y%m%d_%H%M%S).sql
+
+clean: ## Remove all containers and volumes (WARNING: Deletes data!)
+	docker-compose -f $(COMPOSE_FILE) down -v
+
+clean-all: ## Remove all Docker resources
+	docker-compose -f $(COMPOSE_FILE) down -v --rmi all
+
+ps: ## Show running containers
+	docker-compose -f $(COMPOSE_FILE) ps
+
+stats: ## Show container resource usage
+	docker stats
+
+health: ## Run health check
+	./Docker/docker-health-check.sh
+
+setup: ## Run automated setup
+	./Docker/docker-setup.sh
+
+# Production commands
+prod-build: ## Build production images
+	docker-compose -f $(COMPOSE_PROD_FILE) build
+
+prod-up: ## Start production services
+	docker-compose -f $(COMPOSE_PROD_FILE) up -d
+
+prod-down: ## Stop production services
+	docker-compose -f $(COMPOSE_PROD_FILE) down
+
+prod-logs: ## Show production logs
+	docker-compose -f $(COMPOSE_PROD_FILE) logs -f
+
+prod-restart: ## Restart production services
+	docker-compose -f $(COMPOSE_PROD_FILE) restart
+
+prod-ps: ## Show production containers
+	docker-compose -f $(COMPOSE_PROD_FILE) ps
+

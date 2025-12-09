@@ -154,3 +154,8 @@ dump.rdb
 
 151100
 151100.*
+
+# Docker
+.env.docker
+*.sql
+backup_*.sql
